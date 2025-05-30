@@ -1,41 +1,76 @@
 import React, { useEffect, useState } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Camera } from 'lucide-react';
 import Button from '../components/Button';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
+import { getUserById, updateUserById } from '../apis/userApi';
+import { toast } from 'react-toastify';
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
-
+  const { user } = useAuthContext(); // chỉ dùng để lấy user.sub
+  const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
     phone: '',
     address: '',
     dateOfBirth: '',
-    avatar: ''
+    avatar: '',
   });
 
-  const [isEditing, setIsEditing] = useState(false);
-
   useEffect(() => {
-    if (user) {
-      setProfileData({
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        address: user.address || '',
-        dateOfBirth: user.dateOfBirth || '',
-        avatar:
-          user.avatar ||
-          'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg'
-      });
-    }
+    const fetchUserInfo = async () => {
+      if (user?.sub) {
+        try {
+          const data = await getUserById(user.sub);
+          if (!data) {
+            console.error('❌ Không có dữ liệu user trả về');
+            return;
+          }
+          console.log('✅ Thông tin user:', data);
+          setProfileData({
+            name: data.fullName || '',
+            email: data.email || '',
+            phone: data.phoneNumber || '',
+            address: data.address || '',
+            dateOfBirth: data.dateOfBirth?.split('T')[0] || '',
+            avatar: data.imageUrl || 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
+          });
+        } catch (error) {
+          console.error('❌ Lỗi khi lấy thông tin người dùng:', error);
+        }
+      }
+    };
+
+    fetchUserInfo();
   }, [user]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsEditing(false);
-    // TODO: Implement profile update logic
+
+    if (!user?.sub) {
+      console.error('❌ Không có userId');
+      toast.error('Không thể xác định người dùng.');
+      return;
+    }
+
+    const updatedUser = {
+      fullName: profileData.name,
+      address: profileData.address,
+      dateOfBirth: new Date(profileData.dateOfBirth).toISOString(),
+      imageUrl: profileData.avatar,
+      phoneNumber: profileData.phone,
+    };
+
+    console.log('📤 Gửi dữ liệu cập nhật:', updatedUser);
+
+    try {
+      await updateUserById(user.sub, updatedUser); // ✅ API PUT
+      toast.success('Cập nhật thành công!');
+      setIsEditing(false);
+    } catch (error) {
+      console.error('❌ Lỗi cập nhật:', error);
+      toast.error('Cập nhật thất bại');
+    }
   };
 
   return (
@@ -56,17 +91,27 @@ const Profile: React.FC = () => {
                   className="w-32 h-32 rounded-full object-cover"
                 />
                 {isEditing && (
-                  <button
-                    type="button"
-                    className="absolute bottom-0 right-0 bg-teal-500 text-white p-2 rounded-full hover:bg-teal-600"
-                  >
-                    <Camera className="h-5 w-5" />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="absolute bottom-0 right-0 bg-teal-500 text-white p-2 rounded-full hover:bg-teal-600"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </button>
+                    <input
+                      type="text"
+                      value={profileData.avatar}
+                      onChange={(e) => setProfileData({ ...profileData, avatar: e.target.value })}
+                      placeholder="Nhập URL ảnh đại diện"
+                      className="mt-2 w-64 text-sm px-3 py-2 border rounded-md"
+                    />
+                  </>
                 )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Họ tên */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
                 <div className="relative">
@@ -78,11 +123,12 @@ const Profile: React.FC = () => {
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     disabled={!isEditing}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
+                    className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
                 </div>
               </div>
 
+              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <div className="relative">
@@ -92,13 +138,13 @@ const Profile: React.FC = () => {
                   <input
                     type="email"
                     value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    disabled={!isEditing}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
+                    disabled
+                    className="block w-full pl-10 pr-3 py-2 border rounded-md bg-gray-50 text-gray-500"
                   />
                 </div>
               </div>
 
+              {/* Số điện thoại */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
                 <div className="relative">
@@ -110,11 +156,12 @@ const Profile: React.FC = () => {
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                     disabled={!isEditing}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
+                    className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
                 </div>
               </div>
 
+              {/* Ngày sinh */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
                 <div className="relative">
@@ -126,11 +173,12 @@ const Profile: React.FC = () => {
                     value={profileData.dateOfBirth}
                     onChange={(e) => setProfileData({ ...profileData, dateOfBirth: e.target.value })}
                     disabled={!isEditing}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
+                    className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
                 </div>
               </div>
 
+              {/* Địa chỉ */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
                 <div className="relative">
@@ -142,12 +190,13 @@ const Profile: React.FC = () => {
                     value={profileData.address}
                     onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
                     disabled={!isEditing}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
+                    className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
                 </div>
               </div>
             </div>
 
+            {/* Nút hành động */}
             <div className="mt-6 flex justify-end space-x-4">
               {isEditing ? (
                 <>
@@ -166,6 +215,7 @@ const Profile: React.FC = () => {
             </div>
           </form>
 
+          {/* Bảo mật */}
           <div className="border-t border-gray-200 p-6">
             <h2 className="text-lg font-semibold mb-4">Bảo mật</h2>
             <div className="space-y-4">
