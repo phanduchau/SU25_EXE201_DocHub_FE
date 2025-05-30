@@ -10,9 +10,21 @@ import Appointments from './pages/Appointments';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BookAppointment from './pages/BookAppointment';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import BookingConfirmation from './pages/BookingConfirmation';
+import Payment from './pages/Payment';
+import VideoCall from './pages/VideoCall';
+import Chat from './pages/Chat';
+import EmailConfirmation from './pages/EmailConfirmation';
+import Profile from './pages/Profile';
+import ChangePassword from './pages/ChangePassword';
+import ForgotPassword from './pages/ForgotPassword';
+import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
   return (
+     <AuthProvider>
     <Router>
       <div className="flex flex-col min-h-screen">
         <Navigation />
@@ -27,12 +39,23 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/book-appointment/:id" element={<BookAppointment />} />
+            <Route path="/booking-confirmation" element={<BookingConfirmation />} />
+            <Route path="/payment" element={<Payment />} />
+            <Route path="/video-call/:id" element={<VideoCall />} />
+            <Route path="/chat/:id" element={<Chat />} />
+            <Route path="/email-confirmation" element={<EmailConfirmation />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
           </Routes>
         </main>
         
         <Footer />
+
       </div>
+       <ToastContainer position="top-right" autoClose={3000} />
     </Router>
+    </AuthProvider>
   );
 }
 

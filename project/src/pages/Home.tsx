@@ -26,17 +26,17 @@ const Home: React.FC = () => {
             
             <div className="flex flex-wrap gap-4">
               <Button 
-                variant="secondary" 
+                variant="outline" 
                 size="lg"
                 to="/doctors"
-                className="bg-white text-teal-600 hover:bg-gray-100"
+                className="border-white text-white hover:bg-teal-700"
               >
                 Tìm bác sĩ
               </Button>
               <Button 
                 variant="outline" 
                 size="lg"
-                to="/appointment"
+                to="/appointments"
                 className="border-white text-white hover:bg-teal-700"
               >
                 Đặt lịch khám

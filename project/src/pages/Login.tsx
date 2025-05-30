@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
+import { loginApi } from '../apis/authApi';
+import { toast } from 'react-toastify';
+import { useAuth } from '../hooks/useAuth';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -12,11 +17,25 @@ const Login: React.FC = () => {
     remember: false
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log('Login:', formData);
-    navigate('/');
+
+    try {
+      const response = await loginApi(formData.email, formData.password);
+      const token = response.result?.token;
+
+      if (!token) {
+        throw new Error('Token không tồn tại hoặc không hợp lệ');
+      }
+
+      login(token); // Lưu token và decode user
+      toast.success('Đăng nhập thành công!');
+      navigate('/');
+    } catch (error: any) {
+      console.error('Đăng nhập lỗi:', error);
+      const message = error.response?.data?.message || error.message || 'Đăng nhập thất bại';
+      toast.error(`Đăng nhập thất bại: ${message}`);
+    }
   };
 
   return (
@@ -80,11 +99,7 @@ const Login: React.FC = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="text-gray-400 hover:text-gray-500 focus:outline-none"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
@@ -104,7 +119,6 @@ const Login: React.FC = () => {
                   Ghi nhớ đăng nhập
                 </label>
               </div>
-
               <div className="text-sm">
                 <Link to="/forgot-password" className="font-medium text-teal-600 hover:text-teal-500">
                   Quên mật khẩu?
@@ -134,14 +148,12 @@ const Login: React.FC = () => {
                 type="button"
                 className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
               >
-                <span className="sr-only">Sign in with Google</span>
                 Google
               </button>
               <button
                 type="button"
                 className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
               >
-                <span className="sr-only">Sign in with Facebook</span>
                 Facebook
               </button>
             </div>
