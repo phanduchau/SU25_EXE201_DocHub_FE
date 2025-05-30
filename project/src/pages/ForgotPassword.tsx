@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
 import { Mail } from 'lucide-react';
 import Button from '../components/Button';
+import { forgotPassword } from '../apis/authApi';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement forgot password logic
-    setSubmitted(true);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    const res = await forgotPassword(email);
+
+    // 👇 Kiểm tra đúng theo response thực tế
+    if (res.isSuccess) {
+      setSubmitted(true);
+    } else {
+      alert(res.result?.message || 'Gửi email thất bại');
+    }
+  } catch (error) {
+    console.error('Lỗi gửi email đặt lại mật khẩu:', error);
+    alert('Không gửi được email. Vui lòng kiểm tra lại địa chỉ email.');
+  }
+};
 
   if (submitted) {
     return (

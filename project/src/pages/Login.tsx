@@ -31,11 +31,18 @@ const Login: React.FC = () => {
       login(token); // Lưu token và decode user
       toast.success('Đăng nhập thành công!');
       navigate('/');
-    } catch (error: any) {
-      console.error('Đăng nhập lỗi:', error);
-      const message = error.response?.data?.message || error.message || 'Đăng nhập thất bại';
-      toast.error(`Đăng nhập thất bại: ${message}`);
-    }
+     } catch (error: any) {
+  console.error('Đăng nhập lỗi:', error);
+
+  const message =
+    error.response?.data?.errorMessages?.[0] ||
+    error.response?.data?.message ||
+    error.message ||
+    'Đăng nhập thất bại';
+
+  toast.error(`Đăng nhập thất bại: ${message}`);
+}
+
   };
 
   return (

@@ -21,6 +21,7 @@ import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
 import ForgotPassword from './pages/ForgotPassword';
 import { AuthProvider } from './contexts/AuthContext';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </main>
         
