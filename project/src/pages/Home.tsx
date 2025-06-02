@@ -182,7 +182,7 @@ const Home: React.FC = () => {
             Tiết kiệm thời gian và nhận được sự chăm sóc y tế tốt nhất với quy trình đặt lịch khám trực tuyến đơn giản
           </p>
           <Button
-            variant="secondary"
+            variant="outline"
             size="lg"
             to="/doctors"
             className="bg-white text-teal-600 hover:bg-gray-100"

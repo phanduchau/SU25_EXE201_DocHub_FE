@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
           <h3 className="text-lg font-semibold mb-4">KẾT NỐI VỚI CHÚNG TÔI</h3>
           <p className="mb-4">Nền tảng kết nối y tế trực tuyến hàng đầu Việt Nam, kết nối bệnh nhân với bác sĩ</p>
           <div className="flex space-x-4">
-            <Link to="#" className="hover:text-teal-200 transition-colors">
+            <Link to="https://www.facebook.com/profile.php?id=61576076924706" className="hover:text-teal-200 transition-colors">
               <Facebook size={20} />
             </Link>
             <Link to="#" className="hover:text-teal-200 transition-colors">
@@ -36,7 +36,7 @@ const Footer: React.FC = () => {
         <div>
           <h3 className="text-lg font-semibold mb-4">LIÊN HỆ VỚI CHÚNG TÔI</h3>
           <ul className="space-y-2">
-            <li>Địa chỉ: 123 Đường ABC, Quận XYZ, Thành phố HCM</li>
+            <li>Địa chỉ: Lô E2a-7, Đường D1 Khu Công nghệ cao, P. Long Thạnh Mỹ, TP. Thủ Đức, TP. Hồ Chí Minh.</li>
             <li>Hotline: 1900 1234 (8h30 - 18h)</li>
             <li>Thời gian làm việc: 08:00 - 22:00 (T2 - CN)</li>
           </ul>
@@ -54,7 +54,7 @@ const Footer: React.FC = () => {
       </div>
       
       <div className="text-center py-4 text-sm border-t border-teal-400">
-        <p>© {new Date().getFullYear()} DOCHUB. Tất cả các quyền được bảo lưu. Thiết kế và phát triển bởi StackBlitz.</p>
+        <p>© {new Date().getFullYear()} DOCHUB. Tất cả các quyền được bảo lưu. Thiết kế và phát triển bởi DocHub Team.</p>
       </div>
     </footer>
   );
