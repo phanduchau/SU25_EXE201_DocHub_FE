@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Settings, Calendar, CreditCard, LogOut, Bell } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
 const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,6 +21,15 @@ const UserMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleToggleMenu = () => {
+    if (!user) {
+      toast.info('Vui lòng đăng nhập để sử dụng menu cá nhân');
+      navigate('/login');
+      return;
+    }
+    setIsOpen(!isOpen);
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -28,16 +38,21 @@ const UserMenu: React.FC = () => {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
-      >
-        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-          <User className="h-5 w-5 text-gray-500" />
-        </div>
-      </button>
+  onClick={handleToggleMenu}
+  className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
+>
+  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+    <User className="h-5 w-5 text-gray-500" />
+  </div>
+  {user && (
+    <span className="text-sm font-medium text-gray-700 hidden md:inline">
+      {`Welcome: ${user.name}`}
+    </span>
+  )}
+</button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-2 border border-gray-200">
+      {user && isOpen && (
+        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-2 border border-gray-200 z-50">
           <div className="px-4 py-3 border-b border-gray-200">
             <p className="text-sm font-medium text-gray-900">{user?.name || 'Người dùng'}</p>
             <p className="text-sm text-gray-500">{user?.email || ''}</p>
@@ -60,7 +75,7 @@ const UserMenu: React.FC = () => {
               <Settings className="h-4 w-4 mr-3" />
               Cài đặt
             </Link>
-            <Link to="/payment-methods" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            <Link to="/payment" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
               <CreditCard className="h-4 w-4 mr-3" />
               Phương thức thanh toán
             </Link>

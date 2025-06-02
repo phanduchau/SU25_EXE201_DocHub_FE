@@ -6,9 +6,13 @@ import DoctorCard from '../components/DoctorCard';
 import SpecialtyCard from '../components/SpecialtyCard';
 import ConsultationForm from '../components/ConsultationForm';
 import { doctors } from '../data/doctors';
+import { useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../contexts/AuthContext';
 
 const Home: React.FC = () => {
   const featuredDoctors = doctors.slice(0, 4);
+  const navigate = useNavigate();
+  const { user } = useAuthContext();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -23,33 +27,39 @@ const Home: React.FC = () => {
             <p className="text-lg mb-8 opacity-90 max-w-lg">
               Tiện lợi và nhanh chóng với tính năng đặt lịch trực tuyến, tư vấn sức khỏe, kết nối giữa bệnh nhân và bác sĩ y tế nhanh an toàn cho người dùng.
             </p>
-            
+
             <div className="flex flex-wrap gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="lg"
                 to="/doctors"
                 className="border-white text-white hover:bg-teal-700"
               >
                 Tìm bác sĩ
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="lg"
-                to="/appointments"
                 className="border-white text-white hover:bg-teal-700"
+                onClick={() => {
+                  if (user) {
+                    navigate('/appointments');
+                  } else {
+                    navigate('/login');
+                  }
+                }}
               >
                 Đặt lịch khám
               </Button>
             </div>
           </div>
-          
+
           <div className="md:w-5/12">
             <ConsultationForm />
           </div>
         </div>
       </section>
-      
+
       {/* Features Section */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -63,7 +73,7 @@ const Home: React.FC = () => {
                 Kết nối với bác sĩ chuyên nghiệp của chúng tôi
               </p>
             </div>
-            
+
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 text-center transform hover:scale-105 transition-transform duration-300">
               <div className="bg-white w-16 h-16 mx-auto rounded-full flex items-center justify-center shadow-md mb-4">
                 <Search className="h-8 w-8 text-blue-500" />
@@ -73,7 +83,7 @@ const Home: React.FC = () => {
                 Giải pháp y tế hiện đại, đáp ứng nhu cầu chăm sóc sức khỏe chất lượng cao
               </p>
             </div>
-            
+
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 text-center transform hover:scale-105 transition-transform duration-300">
               <div className="bg-white w-16 h-16 mx-auto rounded-full flex items-center justify-center shadow-md mb-4">
                 <Calendar className="h-8 w-8 text-green-500" />
@@ -86,7 +96,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Featured Doctors Section */}
       <section className="py-16 px-4 relative">
         <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/247786/pexels-photo-247786.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2')] opacity-5 bg-cover bg-center"></div>
@@ -97,13 +107,13 @@ const Home: React.FC = () => {
               Đội ngũ bác sĩ giàu kinh nghiệm, tận tâm và chuyên nghiệp của chúng tôi luôn sẵn sàng tư vấn và chăm sóc sức khỏe cho bạn
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
             {featuredDoctors.map((doctor) => (
               <DoctorCard key={doctor.id} doctor={doctor} />
             ))}
           </div>
-          
+
           <div className="mt-10 text-center">
             <Button to="/doctors" variant="outline" size="lg">
               Xem tất cả bác sĩ
@@ -111,7 +121,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Specialties Section */}
       <section className="py-16 px-4 bg-gradient-to-br from-gray-50 to-teal-50">
         <div className="max-w-7xl mx-auto">
@@ -121,7 +131,7 @@ const Home: React.FC = () => {
               Danh sách các chuyên khoa y tế tại DOCHUB
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             <SpecialtyCard
               title="Nội tổng quát"
@@ -162,7 +172,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section */}
       <section className="py-16 px-4 bg-gradient-to-br from-teal-600 to-teal-800 text-white relative">
         <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/3376790/pexels-photo-3376790.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2')] opacity-10 bg-cover bg-center"></div>
@@ -171,8 +181,8 @@ const Home: React.FC = () => {
           <p className="text-lg mb-8 opacity-90 max-w-2xl mx-auto">
             Tiết kiệm thời gian và nhận được sự chăm sóc y tế tốt nhất với quy trình đặt lịch khám trực tuyến đơn giản
           </p>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             size="lg"
             to="/doctors"
             className="bg-white text-teal-600 hover:bg-gray-100"

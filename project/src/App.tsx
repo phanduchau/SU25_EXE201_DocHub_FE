@@ -44,7 +44,7 @@ function App() {
             <Route path="/payment" element={<Payment />} />
             <Route path="/video-call/:id" element={<VideoCall />} />
             <Route path="/chat/:id" element={<Chat />} />
-            <Route path="/email-confirmation" element={<EmailConfirmation />} />
+            <Route path="/confirm-email" element={<EmailConfirmation />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
