@@ -49,3 +49,54 @@ export interface User {
   role: UserRole;
   avatar?: string;
 }
+
+
+// Thống kê tổng quan (Dashboard)
+export interface StatsData {
+  totalUsers: number;
+  totalOrders: number;
+  totalSales: number;
+  totalPending: number;
+  userGrowth: number;
+  orderGrowth: number;
+  salesGrowth: number;
+  pendingGrowth: number;
+}
+
+// Người dùng
+export type UserRole = 'patient' | 'doctor' | 'admin';
+export type UserStatus = 'active' | 'inactive' | 'suspended';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  joinDate: string;     // ISO string (yyyy-mm-dd)
+  lastLogin: string;    // ISO string
+  avatar?: string;
+}
+
+// Bác sĩ
+export type DoctorStatus = 'active' | 'pending' | 'suspended';
+
+export interface AdminDoctor {
+  id: string;
+  name: string;
+  specialty: string;
+  email: string;
+  phone: string;
+  status: DoctorStatus;
+  patients: number;
+  revenue: number;
+  rating: number;
+}
+
+// Dữ liệu doanh thu
+export interface RevenueData {
+  month: string;
+  revenue: number;
+  appointments: number;
+  percentage: number;
+}

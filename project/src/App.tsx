@@ -22,6 +22,7 @@ import ChangePassword from './pages/ChangePassword';
 import ForgotPassword from './pages/ForgotPassword';
 import { AuthProvider } from './contexts/AuthContext';
 import ResetPassword from './pages/ResetPassword';
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>
         
