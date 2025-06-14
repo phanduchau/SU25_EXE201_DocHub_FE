@@ -23,6 +23,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import { AuthProvider } from './contexts/AuthContext';
 import ResetPassword from './pages/ResetPassword';
 import Admin from './pages/Admin';
+import Landing from './pages/Landing';
+import DoctorDashboard from './pages/DoctorDashboard';
 
 function App() {
   return (
@@ -51,6 +53,8 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/landing" element={<Landing />} />
+            <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
           </Routes>
         </main>
         
