@@ -3,7 +3,7 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: 'patient' | 'doctor' | 'admin';
+  role: 'customer' | 'doctor' | 'admin';
   status: 'active' | 'inactive' | 'suspended';
   joinDate: string;     // ISO format e.g. "2024-01-15"
   lastLogin: string;    // ISO format e.g. "2024-03-10"

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Home, Calendar, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
-import { registerApi } from '../apis/authApi';
+import { registerApi } from '../apis/auth/authApi';
 import { toast } from 'react-toastify';
 
 const Register: React.FC = () => {

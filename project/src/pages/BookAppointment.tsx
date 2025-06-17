@@ -4,7 +4,7 @@ import { Calendar, Clock, CreditCard, FileText } from 'lucide-react';
 import Button from '../components/Button';
 import AppointmentCalendar from '../components/AppointmentCalendar';
 import { doctors } from '../data/doctors';
-import { bookAppointmentApi } from '../apis/appointmentApi';
+import { bookAppointmentApi } from '../apis/booking/appointmentApi';
 
 const BookAppointment: React.FC = () => {
   const { id } = useParams<{ id: string }>();

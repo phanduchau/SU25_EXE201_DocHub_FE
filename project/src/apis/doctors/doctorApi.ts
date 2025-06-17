@@ -1,4 +1,4 @@
-import axiosClient from './axiosClient';
+import axiosClient from '../axiosClient';
 
 // Create doctor account
 export const createDoctorAccount = async (doctorData: {

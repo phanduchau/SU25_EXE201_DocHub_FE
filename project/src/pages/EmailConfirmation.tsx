@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle } from 'lucide-react';
 import Button from '../components/Button';
-import { confirmEmailApi } from '../apis/authApi';
+import { confirmEmailApi } from '../apis/auth/authApi';
 
 const EmailConfirmation: React.FC = () => {
   const [searchParams] = useSearchParams();

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Camera } from 'lucide-react';
 import Button from '../components/Button';
 import { useAuthContext } from '../contexts/AuthContext';
-import { getUserById, updateUserById } from '../apis/userApi';
+import { getUserById, updateUserById } from '../apis/users/userApi';
 import { toast } from 'react-toastify';
 
 const Profile: React.FC = () => {

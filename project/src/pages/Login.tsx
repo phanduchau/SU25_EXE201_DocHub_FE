@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
-import { loginApi } from '../apis/authApi';
+import { loginApi } from '../apis/auth/authApi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../hooks/useAuth';
 

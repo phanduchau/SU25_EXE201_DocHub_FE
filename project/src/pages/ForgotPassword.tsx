@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail } from 'lucide-react';
 import Button from '../components/Button';
-import { forgotPassword } from '../apis/authApi';
+import { forgotPassword } from '../apis/auth/authApi';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');

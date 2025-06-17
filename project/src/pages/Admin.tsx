@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import {
+  getAllUsers,
+  getUserById,
+  updateUserById,
+  deleteUser
+} from '../apis/users/userApi';
+
 import { 
   Users, 
   UserPlus, 
@@ -28,15 +35,16 @@ import {
   Bell
 } from 'lucide-react';
 import Button from '../components/Button';
+
+
 interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  role: 'patient' | 'doctor' | 'admin';
-  status: 'active' | 'inactive' | 'suspended';
-  joinDate: string;
-  lastLogin: string;
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  isActive: boolean;
 }
+
 interface AdminDoctor {
   id: string;
   name: string;
@@ -59,36 +67,41 @@ const Admin: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [chartFilter, setChartFilter] = useState<'year' | 'month' | 'week'>('month');
   const [sortBy, setSortBy] = useState<'revenue' | 'appointments' | 'growth'>('revenue');
+  const [userList, setUserList] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+
+  useEffect(() => {
+  const fetchUsers = async () => {
+    setLoading(true);
+    const data = await getAllUsers();
+    if (data) setUserList(data);
+    setLoading(false);
+  };
+  fetchUsers();
+}, []);
+const handleViewUser = async (id: string) => {
+  const user = await getUserById(id);
+  if (user) setSelectedUser(user);
+};
+
+const handleDeleteUser = async (id: string) => {
+  const confirm = window.confirm('Bạn có chắc muốn xoá người dùng này?');
+  if (confirm) {
+    const result = await deleteUser(id);
+    if (result) setUserList(prev => prev.filter(u => u.id !== id));
+  }
+};
+
+const handleUpdateUser = async (id: string, updatedData: Partial<AdminUser>) => {
+  const result = await updateUserById(id, updatedData);
+  if (result) {
+    setUserList(prev => prev.map(u => (u.id === id ? { ...u, ...updatedData } : u)));
+  }
+};
+
   // Mock data
-  const users: AdminUser[] = [
-    {
-      id: '1',
-      name: 'Nguyễn Văn A',
-      email: 'nguyenvana@example.com',
-      role: 'patient',
-      status: 'active',
-      joinDate: '2024-01-15',
-      lastLogin: '2024-03-10'
-    },
-    {
-      id: '2',
-      name: 'Trần Thị B',
-      email: 'tranthib@example.com',
-      role: 'patient',
-      status: 'active',
-      joinDate: '2024-02-20',
-      lastLogin: '2024-03-09'
-    },
-    {
-      id: '3',
-      name: 'BS. Lê Văn C',
-      email: 'levanc@example.com',
-      role: 'doctor',
-      status: 'active',
-      joinDate: '2024-01-01',
-      lastLogin: '2024-03-10'
-    }
-  ];
+
   const doctors: AdminDoctor[] = [
     {
       id: '1',
@@ -393,16 +406,10 @@ const Admin: React.FC = () => {
                   Người dùng
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vai trò
+                  Số điện thoại
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ngày tham gia
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Đăng nhập cuối
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Hành động
@@ -410,53 +417,48 @@ const Admin: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
+              {userList.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'doctor' ? 'bg-green-100 text-green-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {user.role === 'admin' ? 'Quản trị' : 
-                       user.role === 'doctor' ? 'Bác sĩ' : 'Bệnh nhân'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.status === 'active' ? 'bg-green-100 text-green-800' :
-                      user.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {user.status === 'active' ? 'Hoạt động' :
-                       user.status === 'inactive' ? 'Không hoạt động' : 'Tạm khóa'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(user.joinDate).toLocaleDateString('vi-VN')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(user.lastLogin).toLocaleDateString('vi-VN')}
-                  </td>
+  <div>
+    <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
+    <div className="text-sm text-gray-500">{user.email}</div>
+  </div>
+</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+  {user.phoneNumber}
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+    user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+  }`}>
+    {user.isActive ? 'Hoạt động' : 'Bị khóa'}
+  </span>
+</td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button className="text-green-600 hover:text-green-900">
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+  <div className="flex space-x-2">
+    <button
+      className="text-blue-600 hover:text-blue-900"
+      onClick={() => handleViewUser(user.id)}
+    >
+      <Eye className="h-4 w-4" />
+    </button>
+    <button
+      className="text-green-600 hover:text-green-900"
+      onClick={() => handleUpdateUser(user.id, { fullName: user.fullName + ' (updated)' })} // Hoặc truyền modal update sau
+    >
+      <Edit className="h-4 w-4" />
+    </button>
+    <button
+      className="text-red-600 hover:text-red-900"
+      onClick={() => handleDeleteUser(user.id)}
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
+  </div>
+</td>
+
                 </tr>
               ))}
             </tbody>

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
-import { resetPassword } from '../apis/authApi';
+import { resetPassword } from '../apis/auth/authApi';
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
