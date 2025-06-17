@@ -4,6 +4,7 @@ import { Calendar, Clock, CreditCard, FileText } from 'lucide-react';
 import Button from '../components/Button';
 import AppointmentCalendar from '../components/AppointmentCalendar';
 import { doctors } from '../data/doctors';
+import { bookAppointmentApi } from '../apis/appointmentApi';
 
 const BookAppointment: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,20 +28,34 @@ const BookAppointment: React.FC = () => {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedDate || !selectedTime) {
-      alert('Vui lòng chọn ngày và giờ khám');
-      return;
-    }
-    // TODO: Implement booking logic
-    console.log('Booking:', {
+ const handleSubmit = async () => {
+  if (!selectedDate || !selectedTime) {
+    alert('Vui lòng chọn ngày và giờ khám');
+    return;
+  }
+
+  try {
+    const payload = {
       doctorId: doctor.id,
-      date: selectedDate,
+      date: selectedDate.toISOString(),
       time: selectedTime,
-      symptoms
-    });
-  };
+      symptoms,
+    };
+
+    const response = await bookAppointmentApi(payload);
+
+    if (response?.isSuccess) {
+      alert('Đặt lịch thành công!');
+      // Redirect hoặc reset form tại đây nếu muốn
+    } else {
+      alert(response?.message || 'Đặt lịch thất bại');
+    }
+  } catch (error) {
+    console.error('Lỗi đặt lịch:', error);
+    alert('Có lỗi xảy ra khi đặt lịch');
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
