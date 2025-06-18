@@ -2,44 +2,69 @@ import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import DoctorCard from '../components/DoctorCard';
 import Button from '../components/Button';
-import { doctors, specialties } from '../data/doctors';
 import { Doctor } from '../types';
+import { getAllDoctors } from '../apis/doctors/doctorApi';
 
 const DoctorsList: React.FC = () => {
-  const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>(doctors);
+  const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
+  const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('');
-  
+
   useEffect(() => {
-    let results = doctors;
-    
-    // Filter by search term
+    const fetchDoctors = async () => {
+      try {
+        const apiData = await getAllDoctors();
+        const mapped: Doctor[] = apiData.map((doc: any) => ({
+          id: doc.doctorId,
+          name: doc.userName,
+          email: doc.userEmail,
+          phone: doc.userPhone,
+          specialty: doc.specialization || '',
+          hospital: doc.hospitalName || '',
+          experience: doc.yearsOfExperience || 0,
+          image: doc.userImageUrl || 'https://via.placeholder.com/150',
+          rating: doc.rating || 4.5 // fallback nếu không có rating
+        }));
+        setAllDoctors(mapped);
+        setFilteredDoctors(mapped);
+      } catch (error) {
+        console.error('Failed to fetch doctors:', error);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
+  useEffect(() => {
+    let results = allDoctors;
+
     if (searchTerm) {
-      results = results.filter(doctor => 
+      results = results.filter(doctor =>
         doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
-    // Filter by specialty
+
     if (selectedSpecialty) {
-      results = results.filter(doctor => 
+      results = results.filter(doctor =>
         doctor.specialty.toLowerCase().includes(selectedSpecialty.toLowerCase())
       );
     }
-    
+
     setFilteredDoctors(results);
-  }, [searchTerm, selectedSpecialty]);
-  
+  }, [searchTerm, selectedSpecialty, allDoctors]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // The filtering is already handled by the useEffect
   };
-  
+
   const handleSpecialtyChange = (specialty: string) => {
     setSelectedSpecialty(specialty === selectedSpecialty ? '' : specialty);
   };
-  
+
+  const specialtyList = Array.from(new Set(allDoctors.map(doc => doc.specialty))).filter(s => s);
+
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-7xl mx-auto">
@@ -49,7 +74,7 @@ const DoctorsList: React.FC = () => {
             <p className="text-gray-600">Tìm bác sĩ phù hợp với nhu cầu của bạn</p>
           </div>
         </div>
-        
+
         {/* Search and Filters */}
         <div className="bg-teal-50 rounded-lg p-6 shadow-sm mb-8">
           <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 mb-6">
@@ -68,47 +93,23 @@ const DoctorsList: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Chuyên khoa</label>
               <select
                 value={selectedSpecialty}
-                onChange={(e) => setSelectedSpecialty(e.target.value)}
+                onChange={(e) => handleSpecialtyChange(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
               >
                 <option value="">Tất cả chuyên khoa</option>
-                {specialties.map((specialty) => (
-                  <option key={specialty.id} value={specialty.name}>
-                    {specialty.name}
+                {specialtyList.map((specialty, idx) => (
+                  <option key={idx} value={specialty}>
+                    {specialty}
                   </option>
                 ))}
               </select>
             </div>
-            
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Giá</label>
-              <select 
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-              >
-                <option value="">Tất cả mức giá</option>
-                <option value="low">Dưới 300,000 VNĐ</option>
-                <option value="medium">300,000 - 500,000 VNĐ</option>
-                <option value="high">Trên 500,000 VNĐ</option>
-              </select>
-            </div>
-            
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Đánh giá</label>
-              <select 
-                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-              >
-                <option value="">Tất cả đánh giá</option>
-                <option value="4.5">Từ 4.5 sao</option>
-                <option value="4">Từ 4.0 sao</option>
-                <option value="3.5">Từ 3.5 sao</option>
-              </select>
-            </div>
-            
+
             <div className="self-end">
               <Button type="submit" variant="primary">
                 Tìm kiếm
@@ -116,7 +117,7 @@ const DoctorsList: React.FC = () => {
             </div>
           </form>
         </div>
-        
+
         {/* Results */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-4">Kết quả tìm kiếm ({filteredDoctors.length})</h2>
@@ -126,12 +127,12 @@ const DoctorsList: React.FC = () => {
             ))}
           </div>
         </div>
-        
+
         {filteredDoctors.length === 0 && (
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold mb-2">Không tìm thấy bác sĩ nào</h3>
             <p className="text-gray-600 mb-4">Vui lòng thử với các tiêu chí tìm kiếm khác</p>
-            <Button onClick={() => {setSearchTerm(''); setSelectedSpecialty('');}}>
+            <Button onClick={() => { setSearchTerm(''); setSelectedSpecialty(''); }}>
               Xóa bộ lọc
             </Button>
           </div>

@@ -10,8 +10,6 @@ import Appointments from './pages/Appointments';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BookAppointment from './pages/BookAppointment';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import BookingConfirmation from './pages/BookingConfirmation';
 import Payment from './pages/Payment';
 import VideoCall from './pages/VideoCall';
@@ -20,49 +18,130 @@ import EmailConfirmation from './pages/EmailConfirmation';
 import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
 import ForgotPassword from './pages/ForgotPassword';
-import { AuthProvider } from './contexts/AuthContext';
 import ResetPassword from './pages/ResetPassword';
 import Admin from './pages/Admin';
 import Landing from './pages/Landing';
 import DoctorDashboard from './pages/DoctorDashboard';
 
+import { AuthProvider } from './contexts/AuthContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import RequireAuth from './components/RequireAuth'; // 🛡 bảo vệ route
+
 function App() {
   return (
-     <AuthProvider>
-    <Router>
-      <div className="flex flex-col min-h-screen">
-        <Navigation />
-        
-        <main className="flex-grow">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/doctors" element={<DoctorsList />} />
-            <Route path="/doctors/:id" element={<DoctorDetail />} />
-            <Route path="/membership" element={<Membership />} />
-            <Route path="/appointments" element={<Appointments />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/book-appointment/:id" element={<BookAppointment />} />
-            <Route path="/booking-confirmation" element={<BookingConfirmation />} />
-            <Route path="/payment" element={<Payment />} />
-            <Route path="/video-call/:id" element={<VideoCall />} />
-            <Route path="/chat/:id" element={<Chat />} />
-            <Route path="/confirm-email" element={<EmailConfirmation />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/landing" element={<Landing />} />
-            <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
-          </Routes>
-        </main>
-        
-        <Footer />
+    <AuthProvider>
+      <Router>
+        <div className="flex flex-col min-h-screen">
+          <Navigation />
 
-      </div>
-       <ToastContainer position="top-right" autoClose={3000} />
-    </Router>
+          <main className="flex-grow">
+            <Routes>
+              {/* 🌐 Public routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/doctors" element={<DoctorsList />} />
+              <Route path="/doctors/:id" element={<DoctorDetail />} />
+              <Route path="/membership" element={<Membership />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/confirm-email" element={<EmailConfirmation />} />
+              <Route path="/landing" element={<Landing />} />
+
+              {/* 🔐 Protected routes: chỉ cần đăng nhập */}
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth>
+                    <Profile />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/change-password"
+                element={
+                  <RequireAuth>
+                    <ChangePassword />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/appointments"
+                element={
+                  <RequireAuth>
+                    <Appointments />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/book-appointment/:id"
+                element={
+                  <RequireAuth>
+                    <BookAppointment />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/booking-confirmation/:id"
+                element={
+                  <RequireAuth>
+                    <BookingConfirmation />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/payment"
+                element={
+                  <RequireAuth>
+                    <Payment />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/video-call/:id"
+                element={
+                  <RequireAuth>
+                    <VideoCall />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chat/:id"
+                element={
+                  <RequireAuth>
+                    <Chat />
+                  </RequireAuth>
+                }
+              />
+
+              {/* 🩺 Doctor-only route */}
+              <Route
+                path="/doctor-dashboard"
+                element={
+                  <RequireAuth role="Doctor">
+                    <DoctorDashboard />
+                  </RequireAuth>
+                }
+              />
+
+              {/* 🛠 Admin-only route */}
+              <Route
+                path="/admin"
+                element={
+                  <RequireAuth role="Admin">
+                    <Admin />
+                  </RequireAuth>
+                }
+              />
+            </Routes>
+          </main>
+
+          <Footer />
+        </div>
+
+        <ToastContainer position="top-right" autoClose={3000} />
+      </Router>
     </AuthProvider>
   );
 }

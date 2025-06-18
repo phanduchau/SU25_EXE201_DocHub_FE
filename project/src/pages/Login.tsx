@@ -28,9 +28,22 @@ const Login: React.FC = () => {
         throw new Error('Token không tồn tại hoặc không hợp lệ');
       }
 
-      login(token); // Lưu token và decode user
-      toast.success('Đăng nhập thành công!');
-      navigate('/');
+      login(token); // Lưu token & decode
+
+const decodedRole =
+  JSON.parse(atob(token.split('.')[1]))[
+    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+  ];
+
+toast.success('Đăng nhập thành công!');
+
+if (decodedRole === 'Doctor') {
+  navigate('/doctor-dashboard');
+} else if (decodedRole === 'Admin') {
+  navigate('/admin');
+} else {
+  navigate('/');
+}
      } catch (error: any) {
   console.error('Đăng nhập lỗi:', error);
 

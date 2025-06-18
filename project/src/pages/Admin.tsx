@@ -35,6 +35,8 @@ import {
   Bell
 } from 'lucide-react';
 import Button from '../components/Button';
+import CreateDoctorModal from '../components/CreateDoctorModal';
+
 
 
 interface AdminUser {
@@ -70,6 +72,7 @@ const Admin: React.FC = () => {
   const [userList, setUserList] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
   const fetchUsers = async () => {
@@ -168,7 +171,19 @@ const handleUpdateUser = async (id: string, updatedData: Partial<AdminUser>) => 
     { id: 'revenue', label: 'Doanh thu', icon: BarChart3 }
   ];
   const renderOverview = () => (
+  
     <div className="space-y-6">
+
+{/* Nút tạo tài khoản bác sĩ */}
+    <div className="flex justify-end">
+      <button
+        onClick={() => setShowCreateModal(true)}
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+      >
+        + Tạo tài khoản bác sĩ
+      </button>
+    </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -366,6 +381,8 @@ const handleUpdateUser = async (id: string, updatedData: Partial<AdminUser>) => 
           </div>
         </div>
       </div>
+{/* Modal hiển thị khi bấm nút */}
+    {showCreateModal && <CreateDoctorModal onClose={() => setShowCreateModal(false)} />}
     </div>
   );
   const renderUsers = () => (

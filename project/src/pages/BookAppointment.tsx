@@ -1,85 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Calendar, Clock, CreditCard, FileText } from 'lucide-react';
+import { toast } from 'react-toastify';
 import Button from '../components/Button';
 import AppointmentCalendar from '../components/AppointmentCalendar';
-import { doctors } from '../data/doctors';
 import { bookAppointmentApi } from '../apis/booking/appointmentApi';
+import { getDoctorProfile } from '../apis/doctors/doctorApi';
+import { useNavigate } from 'react-router-dom';
+
+interface Doctor {
+  doctorId: number;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  userImageUrl: string | null;
+  specialization: string;
+  yearsOfExperience: number;
+  bio: string;
+  hospitalName: string;
+  rating: number | null;
+  isActive: boolean;
+}
 
 const BookAppointment: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [symptoms, setSymptoms] = useState('');
+  const navigate = useNavigate();
+
   
-  const doctor = doctors.find(d => d.id === id);
-  
+
+  useEffect(() => {
+    if (id) {
+      getDoctorProfile(id)
+        .then(setDoctor)
+        .catch(() => {
+          setDoctor(null);
+          toast.error('Không tìm thấy bác sĩ');
+        });
+    }
+  }, [id]);
+
+  const handleSubmit = async () => {
+    if (!selectedDate || !selectedTime) {
+      toast.warning('Vui lòng chọn ngày và giờ khám');
+      return;
+    }
+
+    try {
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const appointmentDate = new Date(selectedDate);
+      appointmentDate.setHours(hours);
+      appointmentDate.setMinutes(minutes);
+      appointmentDate.setSeconds(0);
+
+      const payload = {
+        doctorId: doctor!.doctorId, // đã được kiểm tra != null
+        appointmentDate: appointmentDate.toISOString(),
+        symptoms,
+      };
+
+      const response = await bookAppointmentApi(payload);
+
+if (response?.isSuccess && response.result?.appointmentId) {
+  toast.success('🎉 Đặt lịch thành công!');
+  setTimeout(() => {
+    navigate(`/booking-confirmation/${response.result.appointmentId}`);
+  }, 1000); // Chờ 1s sau toast rồi chuyển trang
+} else {
+  toast.error(response?.message || '❌ Đặt lịch thất bại');
+}
+    } catch (error) {
+      console.error('Lỗi đặt lịch:', error);
+      toast.error('❌ Có lỗi xảy ra khi đặt lịch');
+    }
+  };
+
   if (!doctor) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Không tìm thấy bác sĩ</h1>
           <p className="mb-4">Bác sĩ bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
-          <Button to="/doctors" variant="primary">
-            Quay lại danh sách bác sĩ
-          </Button>
+          <Button to="/doctors" variant="primary">Quay lại danh sách bác sĩ</Button>
         </div>
       </div>
     );
   }
-
- const handleSubmit = async () => {
-  if (!selectedDate || !selectedTime) {
-    alert('Vui lòng chọn ngày và giờ khám');
-    return;
-  }
-
-  try {
-    const payload = {
-      doctorId: doctor.id,
-      date: selectedDate.toISOString(),
-      time: selectedTime,
-      symptoms,
-    };
-
-    const response = await bookAppointmentApi(payload);
-
-    if (response?.isSuccess) {
-      alert('Đặt lịch thành công!');
-      // Redirect hoặc reset form tại đây nếu muốn
-    } else {
-      alert(response?.message || 'Đặt lịch thất bại');
-    }
-  } catch (error) {
-    console.error('Lỗi đặt lịch:', error);
-    alert('Có lỗi xảy ra khi đặt lịch');
-  }
-};
-
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Đặt lịch khám</h1>
-          <p className="text-gray-600">Đặt lịch khám với bác sĩ {doctor.name}</p>
+          <p className="text-gray-600">Đặt lịch khám với bác sĩ {doctor.userName}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Bên trái: thông tin bác sĩ + chọn thời gian */}
           <div className="md:col-span-2">
             <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
               <div className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Thông tin bác sĩ</h2>
                 <div className="flex items-center mb-6">
                   <img
-                    src={doctor.image}
-                    alt={doctor.name}
+                    src={doctor.userImageUrl ?? '/default-avatar.png'}
+                    alt={doctor.userName}
                     className="w-20 h-20 rounded-full object-cover mr-4"
                   />
                   <div>
-                    <h3 className="font-medium text-gray-900">{doctor.name}</h3>
-                    <p className="text-gray-600">{doctor.specialty}</p>
-                    <p className="text-gray-600">{doctor.hospital}</p>
+                    <h3 className="font-medium text-gray-900">{doctor.userName}</h3>
+                    <p className="text-gray-600">{doctor.specialization}</p>
+                    <p className="text-gray-600">{doctor.hospitalName}</p>
                   </div>
                 </div>
 
@@ -107,6 +141,7 @@ const BookAppointment: React.FC = () => {
             </div>
           </div>
 
+          {/* Bên phải: tổng quan & xác nhận */}
           <div className="md:col-span-1">
             <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-4">
               <div className="p-6">
@@ -135,23 +170,6 @@ const BookAppointment: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-600">Giờ khám</p>
                       <p className="font-medium">{selectedTime || 'Chưa chọn'}</p>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-600">Phí tư vấn</span>
-                      <span className="font-medium">{doctor.consultationFee?.toLocaleString()} VNĐ</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-600">Phí đặt lịch</span>
-                      <span className="font-medium">50,000 VNĐ</span>
-                    </div>
-                    <div className="flex justify-between font-medium text-lg border-t border-gray-200 pt-2 mt-2">
-                      <span>Tổng cộng</span>
-                      <span className="text-teal-600">
-                        {(doctor.consultationFee! + 50000).toLocaleString()} VNĐ
-                      </span>
                     </div>
                   </div>
 

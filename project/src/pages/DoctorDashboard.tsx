@@ -548,7 +548,7 @@ const DoctorDashboard: React.FC = () => {
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phí tư vấn (VNĐ)
                 </label>
@@ -559,7 +559,7 @@ const DoctorDashboard: React.FC = () => {
                   disabled={!isEditingProfile}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
-              </div>
+              </div> */}
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
