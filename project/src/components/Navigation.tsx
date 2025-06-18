@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
 import Logo from './Logo';
 import UserMenu from './UserMenu';
+import NotificationDropdown from './NotificationDropdown';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -34,10 +34,8 @@ const Navigation: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex items-center space-x-4">
-        <button className="text-gray-500 hover:text-gray-700 transition-colors p-2 rounded-full hover:bg-gray-100">
-          <Bell size={20} />
-        </button>
+    <div className="flex items-center space-x-4">
+        <NotificationDropdown />
         <UserMenu />
       </div>
     </nav>
