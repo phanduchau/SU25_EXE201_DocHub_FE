@@ -157,14 +157,6 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className =
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    // Debug cho lần đầu
-    console.log('Time debug:', {
-      input: dateString,
-      parsed: date.toISOString(),
-      now: now.toISOString(),
-      diffMins
-    });
-
     if (diffMins < 1) return 'Vừa xong';
     if (diffMins < 60) return `${diffMins} phút trước`;
     if (diffHours < 24) return `${diffHours} giờ trước`;
