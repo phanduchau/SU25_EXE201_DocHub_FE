@@ -64,18 +64,21 @@ export interface StatsData {
 }
 
 // Người dùng
-export type UserRole = 'patient' | 'doctor' | 'admin';
+
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 
 export interface AdminUser {
   id: string;
-  name: string;
+  userName: string;
+  fullName: string;
   email: string;
-  role: UserRole;
-  status: UserStatus;
-  joinDate: string;     // ISO string (yyyy-mm-dd)
-  lastLogin: string;    // ISO string
-  avatar?: string;
+  phoneNumber: string;
+  address: string;
+  dateOfBirth: string;
+  imageUrl: string;
+  certificateImageUrl: string;
+  isActive: boolean;
+  roles: string[];
 }
 
 // Bác sĩ

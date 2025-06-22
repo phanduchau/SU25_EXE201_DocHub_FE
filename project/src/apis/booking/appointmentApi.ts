@@ -14,3 +14,8 @@ export const getAppointmentById = async (id: number) => {
   const response = await axiosClient.get(`/Appointment/${id}`);
   return response.data;
 };
+
+export const getAppointmentsByUserId = async (userId: string) => {
+  const res = await axiosClient.get(`/Appointment/user/${userId}`);
+  return res.data.result;
+};

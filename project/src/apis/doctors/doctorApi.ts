@@ -24,3 +24,4 @@ export const updateDoctorProfile = async (id: string, data: any) => {
   const response = await axiosClient.put(`/Doctor/${id}`, data);
   return response.data;
 };
+

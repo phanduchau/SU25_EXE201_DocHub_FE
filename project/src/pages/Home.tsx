@@ -1,16 +1,41 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, UserCircle } from 'lucide-react';
 import Button from '../components/Button';
 import DoctorCard from '../components/DoctorCard';
 import SpecialtyCard from '../components/SpecialtyCard';
 import ConsultationForm from '../components/ConsultationForm';
-import { doctors } from '../data/doctors';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../contexts/AuthContext';
+import { getAllDoctors } from '../apis/doctors/doctorApi';
+import { Doctor } from '../types';
 
 const Home: React.FC = () => {
-  const featuredDoctors = doctors.slice(0, 4);
+  const [featuredDoctors, setFeaturedDoctors] = useState<Doctor[]>([]);
+  useEffect(() => {
+  const fetchDoctors = async () => {
+    try {
+      const apiData = await getAllDoctors();
+      const mapped: Doctor[] = apiData.map((doc: any) => ({
+        id: doc.doctorId,
+        name: doc.userName,
+        email: doc.userEmail,
+        phone: doc.userPhone,
+        specialty: doc.specialization || '',
+        hospital: doc.hospitalName || '',
+        experience: doc.yearsOfExperience || 0,
+        image: doc.userImageUrl || 'https://via.placeholder.com/150',
+        rating: doc.rating || 4.5
+      }));
+
+      setFeaturedDoctors(mapped.slice(0, 4)); // Lấy 4 bác sĩ đầu tiên
+    } catch (error) {
+      console.error('Failed to fetch doctors:', error);
+    }
+  };
+
+  fetchDoctors();
+}, []);
   const navigate = useNavigate();
   const { user } = useAuthContext();
 
