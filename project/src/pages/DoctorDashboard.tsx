@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import Button from '../components/Button';
 import { useAuthContext } from '../contexts/AuthContext';
-import { getDoctorStats, getDoctorAppointments, updateAppointmentStatus, getDoctorProfile, updateDoctorProfile } from '../apis/doctorApi';
+import { getDoctorProfile, updateDoctorProfile, getDoctorProfileByUserId } from '../apis/doctors/doctorApi';
 import { toast } from 'react-toastify';
 
 interface DoctorStats {
@@ -46,19 +46,19 @@ interface Appointment {
 }
 
 interface DoctorProfile {
-  id: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  specialty: string;
-  hospital: string;
-  experience: number;
-  consultationFee: number;
-  about: string;
-  education: string[];
-  languages: string[];
-  imageUrl: string;
+  doctorId: number;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  userImageUrl: string | null;
+  specialization: string;
+  yearsOfExperience: number;
+  bio: string;
+  hospitalName: string;
+  rating: number | null;
+  isActive: boolean;
 }
+
 
 const DoctorDashboard: React.FC = () => {
   const { user } = useAuthContext();
@@ -122,45 +122,23 @@ const DoctorDashboard: React.FC = () => {
     }
   ];
 
-  const mockProfile: DoctorProfile = {
-    id: user?.sub || '1',
-    fullName: user?.name || 'BS. Nguyễn Văn A',
-    email: user?.email || 'doctor@example.com',
-    phoneNumber: '0123456789',
-    specialty: 'Khoa Nội tổng quát',
-    hospital: 'Bệnh viện Đa khoa Quốc tế',
-    experience: 10,
-    consultationFee: 500000,
-    about: 'Bác sĩ có hơn 10 năm kinh nghiệm trong lĩnh vực nội khoa, chuyên điều trị các bệnh lý thông thường và phức tạp.',
-    education: ['Đại học Y Hà Nội', 'Chuyên khoa 1 Nội tổng quát'],
-    languages: ['Tiếng Việt', 'Tiếng Anh'],
-    imageUrl: 'https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
+        if (!user?.sub) return;
         setLoading(true);
-        // In a real app, you would fetch data from APIs
-        // const statsData = await getDoctorStats(user?.sub || '');
-        // const appointmentsData = await getDoctorAppointments(user?.sub || '');
-        // const profileData = await getDoctorProfile(user?.sub || '');
-        
-        // For now, using mock data
-        setStats(mockStats);
+        const profileData = await getDoctorProfileByUserId(user.sub);
+        setProfile(profileData);
+         setStats(mockStats);
         setAppointments(mockAppointments);
-        setProfile(mockProfile);
       } catch (error) {
-        console.error('Error fetching doctor data:', error);
-        toast.error('Có lỗi xảy ra khi tải dữ liệu');
+        console.error('Error fetching doctor profile:', error);
+        toast.error('Không thể tải thông tin hồ sơ bác sĩ');
       } finally {
         setLoading(false);
       }
     };
-
-    // if (user?.sub) {
-      fetchData();
-    // }
+    fetchData();
   }, [user]);
 
   const handleAppointmentStatusUpdate = async (appointmentId: string, newStatus: string) => {
@@ -182,9 +160,15 @@ const DoctorDashboard: React.FC = () => {
 
   const handleProfileUpdate = async () => {
     if (!profile) return;
-    
     try {
-      // await updateDoctorProfile(profile.id, profile);
+      const payload = {
+        specialization: profile.specialization,
+        yearsOfExperience: profile.yearsOfExperience,
+        bio: profile.bio,
+        hospitalName: profile.hospitalName,
+        isActive: true
+      };
+      await updateDoctorProfile(profile.doctorId.toString(), payload);
       setIsEditingProfile(false);
       toast.success('Cập nhật thông tin thành công');
     } catch (error) {
@@ -192,6 +176,7 @@ const DoctorDashboard: React.FC = () => {
       toast.error('Có lỗi xảy ra khi cập nhật thông tin');
     }
   };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -429,27 +414,23 @@ const DoctorDashboard: React.FC = () => {
     </div>
   );
 
-  const renderProfile = () => {
+   const renderProfile = () => {
     if (!profile) return null;
-
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">Thông tin cá nhân</h2>
           {!isEditingProfile ? (
             <Button variant="outline" onClick={() => setIsEditingProfile(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Chỉnh sửa
+              <Edit className="h-4 w-4 mr-2" /> Chỉnh sửa
             </Button>
           ) : (
             <div className="flex space-x-2">
               <Button variant="outline" onClick={() => setIsEditingProfile(false)}>
-                <X className="h-4 w-4 mr-2" />
-                Hủy
+                <X className="h-4 w-4 mr-2" /> Hủy
               </Button>
               <Button variant="primary" onClick={handleProfileUpdate}>
-                <Save className="h-4 w-4 mr-2" />
-                Lưu
+                <Save className="h-4 w-4 mr-2" /> Lưu
               </Button>
             </div>
           )}
@@ -459,116 +440,89 @@ const DoctorDashboard: React.FC = () => {
           <div className="p-6">
             <div className="flex items-center space-x-6 mb-6">
               <img
-                src={profile.imageUrl}
-                alt={profile.fullName}
+                src={profile.userImageUrl || ''}
+                alt={profile.userName}
                 className="w-24 h-24 rounded-full object-cover"
               />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">{profile.fullName}</h3>
-                <p className="text-gray-600">{profile.specialty}</p>
-                <p className="text-gray-600">{profile.hospital}</p>
+                <h3 className="text-xl font-semibold text-gray-900">{profile.userName}</h3>
+                <p className="text-gray-600">{profile.specialization}</p>
+                <p className="text-gray-600">{profile.hospitalName}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Họ và tên
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
                 <input
                   type="text"
-                  value={profile.fullName}
-                  onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                  value={profile.userName}
+                  onChange={(e) => setProfile({ ...profile, userName: e.target.value })}
                   disabled={!isEditingProfile}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
-                  value={profile.email}
+                  value={profile.userEmail}
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Số điện thoại
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
                 <input
                   type="tel"
-                  value={profile.phoneNumber}
-                  onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })}
+                  value={profile.userPhone}
+                  onChange={(e) => setProfile({ ...profile, userPhone: e.target.value })}
                   disabled={!isEditingProfile}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Chuyên khoa
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Chuyên khoa</label>
                 <input
                   type="text"
-                  value={profile.specialty}
-                  onChange={(e) => setProfile({ ...profile, specialty: e.target.value })}
+                  value={profile.specialization}
+                  onChange={(e) => setProfile({ ...profile, specialization: e.target.value })}
                   disabled={!isEditingProfile}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bệnh viện/Phòng khám
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bệnh viện/Phòng khám</label>
                 <input
                   type="text"
-                  value={profile.hospital}
-                  onChange={(e) => setProfile({ ...profile, hospital: e.target.value })}
+                  value={profile.hospitalName}
+                  onChange={(e) => setProfile({ ...profile, hospitalName: e.target.value })}
                   disabled={!isEditingProfile}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Kinh nghiệm (năm)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kinh nghiệm (năm)</label>
                 <input
                   type="number"
-                  value={profile.experience}
-                  onChange={(e) => setProfile({ ...profile, experience: parseInt(e.target.value) || 0 })}
+                  value={profile.yearsOfExperience}
+                  onChange={(e) => setProfile({ ...profile, yearsOfExperience: parseInt(e.target.value) || 0 })}
                   disabled={!isEditingProfile}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
-
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phí tư vấn (VNĐ)
-                </label>
-                <input
-                  type="number"
-                  value={profile.consultationFee}
-                  onChange={(e) => setProfile({ ...profile, consultationFee: parseInt(e.target.value) || 0 })}
-                  disabled={!isEditingProfile}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
-                />
-              </div> */}
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Giới thiệu
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giới thiệu</label>
                 <textarea
                   rows={4}
-                  value={profile.about}
-                  onChange={(e) => setProfile({ ...profile, about: e.target.value })}
+                  value={profile.bio}
+                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                   disabled={!isEditingProfile}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />

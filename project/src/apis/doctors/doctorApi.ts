@@ -20,8 +20,21 @@ export const getDoctorProfile = async (id: string) => {
   return response.data.result; // trả về phần "result"
 };
 
-export const updateDoctorProfile = async (id: string, data: any) => {
-  const response = await axiosClient.put(`/Doctor/${id}`, data);
+export const updateDoctorProfile = async (doctorId: string, data: any) => {
+  const payload = {
+    specialization: data.specialization,
+    yearsOfExperience: data.yearsOfExperience,
+    bio: data.bio,
+    hospitalName: data.hospitalName,
+    isActive: true
+  };
+
+  const response = await axiosClient.put(`/Doctor/${doctorId}`, payload);
   return response.data;
+};
+
+export const getDoctorProfileByUserId = async (userId: string) => {
+  const res = await axiosClient.get(`/Doctor/user/${userId}`);
+  return res.data.result; 
 };
 
