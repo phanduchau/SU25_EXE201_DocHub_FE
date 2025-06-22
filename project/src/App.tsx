@@ -35,6 +35,8 @@ import Admin from './pages/Admin';
 import Landing from './pages/Landing';
 import DoctorDashboard from './pages/DoctorDashboard';
 import NotificationPage from './pages/NotificationPage';
+import News from './pages/News';
+import NewsDetail from './pages/NewsDetail';
 
 function App() {
   return (
@@ -57,6 +59,8 @@ function App() {
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/confirm-email" element={<EmailConfirmation />} />
                 <Route path="/landing" element={<Landing />} />
+                <Route path="/news" element={<News />} />
+                <Route path="/news/:id" element={<NewsDetail />} />
 
                 {/* 🔐 Protected routes: chỉ cần đăng nhập */}
                 <Route

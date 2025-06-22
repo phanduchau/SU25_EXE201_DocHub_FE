@@ -27,7 +27,7 @@ const Navigation: React.FC = () => {
           <NavLink to="/doctors" active={isActive('/doctors')}>
             Tìm bác sĩ
           </NavLink>
-          <NavLink to="/services" active={isActive('/services')}>
+          <NavLink to="/news" active={isActive('/news')}>
             Tin tức y tế
           </NavLink>
           <NavLink to="/membership" active={isActive('/membership')}>
