@@ -3,7 +3,9 @@ import { format } from 'date-fns';
 import { Calendar, Clock, FileText } from 'lucide-react';
 import CustomCalendar from '../components/Calendar';
 import { getAppointmentsByUserId } from '../apis/booking/appointmentApi';
-import { useAuthContext  } from '../contexts/AuthContext';
+import { useAuthContext } from '../contexts/AuthContext';
+import AppointmentActionsModal from '../components/AppointmentActionsModal';
+
 
 interface Appointment {
   appointmentId: string;
@@ -18,48 +20,44 @@ interface Appointment {
 }
 
 const Appointments: React.FC = () => {
-  const { user } = useAuthContext (); // context lấy userId
+  const { user } = useAuthContext(); // context lấy userId
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirm' | 'completed' | 'cancelled'>('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+
 
   useEffect(() => {
-  const fetchAppointments = async () => {
-    if (!user?.sub) return;
+    const fetchAppointments = async () => {
+      if (!user?.sub) return;
 
-    try {
-      const raw = await getAppointmentsByUserId(user.sub);
-      const now = new Date();
+      try {
+        const raw = await getAppointmentsByUserId(user.sub);
 
-      const mapped = raw.map((item: any) => {
-        const dateTime = new Date(item.appointmentDate); // ISO string rồi
-        let status: Appointment['status'];
+        const mapped = raw.map((item: any) => {
+          // Dùng đúng status từ backend
+          const status: Appointment['status'] = item.status;
 
-        // API trả status trực tiếp là pending/confirm/cancelled
-        if (item.status === 'cancelled') status = 'cancelled';
-        else if (item.status === 'pending') status = 'pending';
-        else if (dateTime < now) status = 'completed';
-        else status = 'confirm';
+          return {
+            appointmentId: item.appointmentId,
+            doctorName: item.doctorName || 'Không rõ',
+            doctorSpecialty: item.specialization,
+            doctorImage: '', // placeholder nếu chưa có
+            appointmentDate: item.appointmentDate,
+            appointmentTime: format(new Date(item.appointmentDate), 'HH:mm'),
+            status,
+          };
+        });
 
-        return {
-          appointmentId: item.appointmentId,
-          doctorName: item.doctorName || 'Không rõ',
-          doctorSpecialty: item.specialization, // không có trường này trong API
-          doctorImage:'',     // không có ảnh -> placeholder để sau
-          appointmentDate: item.appointmentDate,
-          appointmentTime: format(new Date(item.appointmentDate), 'HH:mm'),
-          status,
-        };
-      });
+        setAppointments(mapped);
+      } catch (error) {
+        console.error('Lỗi khi tải cuộc hẹn:', error);
+      }
+    };
 
-      setAppointments(mapped);
-    } catch (error) {
-      console.error('Lỗi khi tải cuộc hẹn:', error);
-    }
-  };
+    fetchAppointments();
+  }, [user]);
 
-  fetchAppointments();
-}, [user]);
 
 
   const filteredAppointments = appointments.filter((apt) =>
@@ -107,11 +105,10 @@ const Appointments: React.FC = () => {
                     <button
                       key={key}
                       onClick={() => setFilter(key as any)}
-                      className={`px-4 py-2 rounded-md font-medium ${
-                        filter === key
-                          ? `bg-${key === 'pending' ? 'yellow' : key === 'confirm' ? 'blue' : key}-100 text-${key === 'pending' ? 'yellow' : key === 'confirm' ? 'blue' : key}-700`
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                      className={`px-4 py-2 rounded-md font-medium ${filter === key
+                        ? `bg-${key === 'pending' ? 'yellow' : key === 'confirm' ? 'blue' : key}-100 text-${key === 'pending' ? 'yellow' : key === 'confirm' ? 'blue' : key}-700`
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                     >
                       {{
                         all: 'Tất cả',
@@ -128,7 +125,11 @@ const Appointments: React.FC = () => {
               {/* Appointment List */}
               <div className="divide-y divide-gray-200">
                 {filteredAppointments.map((apt) => (
-                  <div key={apt.appointmentId} className="p-4 hover:bg-gray-50">
+                  <div
+                    key={apt.appointmentId}
+                    onClick={() => apt.status === 'confirm' && setSelectedAppointment(apt)}
+                    className="p-4 hover:bg-gray-100 cursor-pointer transition rounded-md"
+                  >
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center mb-4 md:mb-0">
                         <img
@@ -154,29 +155,23 @@ const Appointments: React.FC = () => {
                           <span className="text-sm text-gray-700">{apt.appointmentTime}</span>
                         </div>
                         {renderStatusBadge(apt.status)}
-
                         <div className="flex space-x-2 ml-auto">
-                          {apt.status === 'confirm' && (
-                            <>
-                              <button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-teal-600 hover:bg-teal-700">
-                                Thay đổi
-                              </button>
-                              <button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200">
-                                Hủy
-                              </button>
-                            </>
-                          )}
-                          {apt.status === 'completed' && (
-                            <button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
-                              <FileText className="h-3 w-3 mr-1" />
-                              Xem kết quả
+                          {apt.status === 'confirm' && (<>
+                            <button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-teal-600 hover:bg-teal-700">
+                              Thay đổi
                             </button>
-                          )}
+                            <button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200">
+                              Hủy
+                            </button> </>)}
+                          {apt.status === 'completed' && (<button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
+                            <FileText className="h-3 w-3 mr-1" /> Xem kết quả
+                          </button>)}
                         </div>
                       </div>
                     </div>
                   </div>
                 ))}
+
 
                 {filteredAppointments.length === 0 && (
                   <div className="p-8 text-center">
@@ -221,6 +216,14 @@ const Appointments: React.FC = () => {
           </div>
         </div>
       </div>
+      {selectedAppointment && (
+        <AppointmentActionsModal
+          appointmentId={selectedAppointment.appointmentId}
+          doctorName={selectedAppointment.doctorName}
+          onClose={() => setSelectedAppointment(null)}
+        />
+      )}
+
     </div>
   );
 };
