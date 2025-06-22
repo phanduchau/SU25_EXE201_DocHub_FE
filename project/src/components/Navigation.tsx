@@ -43,6 +43,9 @@ const Navigation: React.FC = () => {
               Bác sĩ Dashboard
             </NavLink>
           )}
+           <NavLink to="/landing" active={isActive('/landing')}>
+            About me
+          </NavLink>
         </div>
       </div>
 
