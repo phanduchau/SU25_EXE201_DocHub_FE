@@ -40,18 +40,8 @@ import CreateDoctorModal from '../components/CreateDoctorModal';
 import EditUserModal from '../components/EditUserModal';
 import UserDetailModal from '../components/UserDetailModal';
 import { AdminUser } from '../types/index';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface AdminDoctor {
-  id: string;
-  name: string;
-  specialty: string;
-  email: string;
-  phone: string;
-  status: 'active' | 'pending' | 'suspended';
-  patients: number;
-  revenue: number;
-  rating: number;
-}
 interface RevenueData {
   month: string;
   revenue: number;
@@ -69,6 +59,9 @@ const Admin: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const doctorList = userList.filter(user => user.roles.includes('Doctor'));
+  const [currentPageUsers, setCurrentPageUsers] = useState(1);
+  const [currentPageDoctors, setCurrentPageDoctors] = useState(1);
+  const itemsPerPage = 3;
 
 
 
@@ -114,6 +107,14 @@ const Admin: React.FC = () => {
       setShowEditModal(true);
     }
   };
+
+  const filteredUsers = userList.filter(user => user.roles.includes('Customer'));
+  const totalPagesUsers = Math.ceil(filteredUsers.length / itemsPerPage);
+  const displayedUsers = filteredUsers.slice((currentPageUsers - 1) * itemsPerPage, currentPageUsers * itemsPerPage);
+
+  const filteredDoctors = userList.filter(user => user.roles.includes('Doctor'));
+  const totalPagesDoctors = Math.ceil(filteredDoctors.length / itemsPerPage);
+  const displayedDoctors = filteredDoctors.slice((currentPageDoctors - 1) * itemsPerPage, currentPageDoctors * itemsPerPage);
 
 
   const revenueData: RevenueData[] = [
@@ -411,7 +412,7 @@ const Admin: React.FC = () => {
             </thead>
 
             <tbody className="bg-white divide-y divide-gray-200">
-              {userList
+              {displayedUsers
                 .filter((user) => user.roles.includes('Customer'))
                 .map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
@@ -463,86 +464,123 @@ const Admin: React.FC = () => {
             </tbody>
 
           </table>
+          <div className="flex justify-end items-center space-x-2 px-6 py-4">
+            <button
+              disabled={currentPageUsers === 1}
+              onClick={() => setCurrentPageUsers(prev => Math.max(prev - 1, 1))}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Trang trước
+            </button>
+            <span className="text-sm">Trang {currentPageUsers} / {totalPagesUsers}</span>
+            <button
+              disabled={currentPageUsers === totalPagesUsers}
+              onClick={() => setCurrentPageUsers(prev => Math.min(prev + 1, totalPagesUsers))}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Trang sau
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
   );
 
   const renderDoctors = () => (
-  <div className="space-y-6">
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-      <h2 className="text-xl font-semibold">Quản lý bác sĩ</h2>
-    </div>
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm bác sĩ..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <h2 className="text-xl font-semibold">Quản lý bác sĩ</h2>
+      </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm bác sĩ..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bác sĩ</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hành động</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {userList
-              .filter(user => user.roles.includes('Doctor'))
-              .map((doctor) => (
-                <tr key={doctor.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{doctor.fullName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{doctor.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      doctor.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {doctor.isActive ? 'Hoạt động' : 'Bị khóa'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        className="text-blue-600 hover:text-blue-900"
-                        onClick={() => handleViewUser(doctor.id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        className="text-green-600 hover:text-green-900"
-                        onClick={() => handleUpdateUser(doctor.id)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-900"
-                        onClick={() => handleDeleteUser(doctor.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bác sĩ</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hành động</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {displayedDoctors
+                .filter(user => user.roles.includes('Doctor'))
+                .map((doctor) => (
+                  <tr key={doctor.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{doctor.fullName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{doctor.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${doctor.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                        {doctor.isActive ? 'Hoạt động' : 'Bị khóa'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={() => handleViewUser(doctor.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="text-green-600 hover:text-green-900"
+                          onClick={() => handleUpdateUser(doctor.id)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-900"
+                          onClick={() => handleDeleteUser(doctor.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+
+          </table>
+          <div className="flex justify-end items-center space-x-2 px-6 py-4">
+            <button
+              disabled={currentPageDoctors === 1}
+              onClick={() => setCurrentPageDoctors(prev => Math.max(prev - 1, 1))}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Trang trước
+            </button>
+            <span className="text-sm">Trang {currentPageDoctors} / {totalPagesDoctors}</span>
+            <button
+              disabled={currentPageDoctors === totalPagesDoctors}
+              onClick={() => setCurrentPageDoctors(prev => Math.min(prev + 1, totalPagesDoctors))}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Trang sau
+            </button>
+          </div>
+
+
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 
   const renderRevenue = () => (
     <div className="space-y-6">
