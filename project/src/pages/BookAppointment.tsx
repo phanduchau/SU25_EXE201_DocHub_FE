@@ -43,40 +43,45 @@ const BookAppointment: React.FC = () => {
     }
   }, [id]);
 
-  const handleSubmit = async () => {
-    if (!selectedDate || !selectedTime) {
-      toast.warning('Vui lòng chọn ngày và giờ khám');
-      return;
+ const handleSubmit = async () => {
+  if (!selectedDate || !selectedTime) {
+    toast.warning('Vui lòng chọn ngày và giờ khám');
+    return;
+  }
+
+  try {
+    // Ghép giờ vào ngày được chọn
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const localDateTime = new Date(selectedDate);
+    localDateTime.setHours(hours, minutes, 0, 0);
+
+    // Chuyển sang UTC
+    const utcDateTime = new Date(localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000);
+    const appointmentDateIso = utcDateTime.toISOString(); // ISO chuẩn, ví dụ: "2025-06-29T01:30:00.000Z"
+
+    const payload = {
+      doctorId: doctor!.doctorId,
+      appointmentDate: appointmentDateIso,
+      symptoms,
+    };
+
+    const response = await bookAppointmentApi(payload);
+
+    if (response?.isSuccess && response.result?.appointmentId) {
+      toast.success('🎉 Đặt lịch thành công!');
+      setTimeout(() => {
+        navigate(`/booking-confirmation/${response.result.appointmentId}`);
+      }, 1000);
+    } else {
+      toast.error(response?.message || '❌ Đặt lịch thất bại');
     }
+  } catch (error) {
+    console.error('Lỗi đặt lịch:', error);
+    toast.error('❌ Có lỗi xảy ra khi đặt lịch');
+  }
+};
 
-    try {
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const appointmentDate = new Date(selectedDate);
-      appointmentDate.setHours(hours);
-      appointmentDate.setMinutes(minutes);
-      appointmentDate.setSeconds(0);
 
-      const payload = {
-        doctorId: doctor!.doctorId, // đã được kiểm tra != null
-        appointmentDate: appointmentDate.toISOString(),
-        symptoms,
-      };
-
-      const response = await bookAppointmentApi(payload);
-
-if (response?.isSuccess && response.result?.appointmentId) {
-  toast.success('🎉 Đặt lịch thành công!');
-  setTimeout(() => {
-    navigate(`/booking-confirmation/${response.result.appointmentId}`);
-  }, 1000); // Chờ 1s sau toast rồi chuyển trang
-} else {
-  toast.error(response?.message || '❌ Đặt lịch thất bại');
-}
-    } catch (error) {
-      console.error('Lỗi đặt lịch:', error);
-      toast.error('❌ Có lỗi xảy ra khi đặt lịch');
-    }
-  };
 
   if (!doctor) {
     return (

@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar, Clock, FileText } from 'lucide-react';
 import CustomCalendar from '../components/Calendar';
-import { getAppointmentsByUserId } from '../apis/booking/appointmentApi';
+import { getAppointmentsByUserId, confirmAppointment, cancelAppointment } from '../apis/booking/appointmentApi';
 import { useAuthContext } from '../contexts/AuthContext';
 import AppointmentActionsModal from '../components/AppointmentActionsModal';
+import { toast } from 'react-toastify';
 
 
 interface Appointment {
@@ -16,13 +17,13 @@ interface Appointment {
   appointmentTime: string;
   userImageUrl: string | null;
   specialization: string;
-  status: 'pending' | 'confirm' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
 }
 
 const Appointments: React.FC = () => {
   const { user } = useAuthContext(); // context lấy userId
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'confirm' | 'completed' | 'cancelled'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
@@ -71,7 +72,7 @@ const Appointments: React.FC = () => {
   const renderStatusBadge = (status: Appointment['status']) => {
     const badgeMap = {
       pending: { color: 'yellow', text: 'Chờ xác nhận' },
-      confirm: { color: 'blue', text: 'Đã xác nhận' },
+      confirmed: { color: 'blue', text: 'Đã xác nhận' },
       completed: { color: 'green', text: 'Hoàn thành' },
       cancelled: { color: 'red', text: 'Đã hủy' },
     };
@@ -101,19 +102,19 @@ const Appointments: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
               <div className="p-4 border-b border-gray-200">
                 <div className="flex space-x-4">
-                  {['all', 'pending', 'confirm', 'completed', 'cancelled'].map((key) => (
+                  {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map((key) => (
                     <button
                       key={key}
                       onClick={() => setFilter(key as any)}
                       className={`px-4 py-2 rounded-md font-medium ${filter === key
-                        ? `bg-${key === 'pending' ? 'yellow' : key === 'confirm' ? 'blue' : key}-100 text-${key === 'pending' ? 'yellow' : key === 'confirm' ? 'blue' : key}-700`
+                        ? `bg-${key === 'pending' ? 'yellow' : key === 'confirmed' ? 'blue' : key}-100 text-${key === 'pending' ? 'yellow' : key === 'confirmed' ? 'blue' : key}-700`
                         : 'text-gray-600 hover:bg-gray-100'
                         }`}
                     >
                       {{
                         all: 'Tất cả',
                         pending: 'Chờ xác nhận',
-                        confirm: 'Đã xác nhận',
+                        confirmed: 'Đã xác nhận',
                         completed: 'Đã hoàn thành',
                         cancelled: 'Đã hủy',
                       }[key]}
@@ -127,7 +128,7 @@ const Appointments: React.FC = () => {
                 {filteredAppointments.map((apt) => (
                   <div
                     key={apt.appointmentId}
-                    onClick={() => apt.status === 'confirm' && setSelectedAppointment(apt)}
+                    onClick={() => apt.status === 'confirmed' && setSelectedAppointment(apt)}
                     className="p-4 hover:bg-gray-100 cursor-pointer transition rounded-md"
                   >
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -156,13 +157,24 @@ const Appointments: React.FC = () => {
                         </div>
                         {renderStatusBadge(apt.status)}
                         <div className="flex space-x-2 ml-auto">
-                          {apt.status === 'confirm' && (<>
-                            <button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-teal-600 hover:bg-teal-700">
-                              Thay đổi
-                            </button>
-                            <button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200">
-                              Hủy
-                            </button> </>)}
+                          {apt.status === 'confirmed' && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await cancelAppointment(apt.appointmentId);
+                                    toast.success('Đã hủy cuộc hẹn');
+                                    setAppointments(prev => prev.map(a => a.appointmentId === apt.appointmentId ? { ...a, status: 'cancelled' } : a));
+                                  } catch (err) {
+                                    toast.error('Lỗi khi hủy');
+                                  }
+                                }}
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200"
+                              >
+                                Hủy
+                              </button>
+                            </>
+                          )}
                           {apt.status === 'completed' && (<button className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
                             <FileText className="h-3 w-3 mr-1" /> Xem kết quả
                           </button>)}

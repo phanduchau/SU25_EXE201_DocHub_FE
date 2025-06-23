@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, 
-  Users, 
-  Clock, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Calendar,
+  Users,
+  Clock,
+  DollarSign,
+  TrendingUp,
   Bell,
   Settings,
   User,
@@ -23,6 +23,9 @@ import Button from '../components/Button';
 import { useAuthContext } from '../contexts/AuthContext';
 import { getDoctorProfile, updateDoctorProfile, getDoctorProfileByUserId } from '../apis/doctors/doctorApi';
 import { toast } from 'react-toastify';
+import { getAppointmentsByDoctorId, confirmAppointment, cancelAppointment } from '../apis/booking/appointmentApi';
+import PatientDetailsModal from '../components/PatientDetailsModal';
+import { useNavigate } from 'react-router-dom';
 
 interface DoctorStats {
   totalPatients: number;
@@ -39,10 +42,8 @@ interface Appointment {
   patientEmail: string;
   date: string;
   time: string;
-  type: 'video' | 'chat' | 'phone';
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  symptoms: string;
-  fee: number;
+  symptoms?: string;
 }
 
 interface DoctorProfile {
@@ -75,6 +76,8 @@ const DoctorDashboard: React.FC = () => {
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
+  const navigate = useNavigate();
 
   // Mock data for demonstration
   const mockStats: DoctorStats = {
@@ -86,42 +89,6 @@ const DoctorDashboard: React.FC = () => {
     pendingAppointments: 12
   };
 
-  const mockAppointments: Appointment[] = [
-    {
-      id: '1',
-      patientName: 'Nguyễn Văn A',
-      patientEmail: 'nguyenvana@email.com',
-      date: '2025-01-15',
-      time: '09:00',
-      type: 'video',
-      status: 'pending',
-      symptoms: 'Đau đầu, chóng mặt kéo dài 3 ngày',
-      fee: 500000
-    },
-    {
-      id: '2',
-      patientName: 'Trần Thị B',
-      patientEmail: 'tranthib@email.com',
-      date: '2025-01-15',
-      time: '10:30',
-      type: 'chat',
-      status: 'confirmed',
-      symptoms: 'Ho khan, sốt nhẹ',
-      fee: 300000
-    },
-    {
-      id: '3',
-      patientName: 'Lê Văn C',
-      patientEmail: 'levanc@email.com',
-      date: '2025-01-15',
-      time: '14:00',
-      type: 'phone',
-      status: 'completed',
-      symptoms: 'Tư vấn về chế độ ăn uống',
-      fee: 400000
-    }
-  ];
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -129,8 +96,26 @@ const DoctorDashboard: React.FC = () => {
         setLoading(true);
         const profileData = await getDoctorProfileByUserId(user.sub);
         setProfile(profileData);
-         setStats(mockStats);
-        setAppointments(mockAppointments);
+
+        const apiAppointments = await getAppointmentsByDoctorId(profileData.doctorId.toString());
+        const transformedAppointments = apiAppointments.map((item: any): Appointment => {
+          const dateObj = new Date(item.appointmentDate);
+          const date = dateObj.toLocaleDateString('vi-VN');
+          const time = dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+          return {
+            id: item.appointmentId.toString(),
+            patientName: item.userName,
+            patientEmail: item.userEmail,
+            date,
+            time,
+            status: item.status?.toLowerCase() || 'pending',
+            symptoms: item.symptoms || ''
+          };
+        });
+
+        setAppointments(transformedAppointments);
+        setStats(mockStats);
       } catch (error) {
         console.error('Error fetching doctor profile:', error);
         toast.error('Không thể tải thông tin hồ sơ bác sĩ');
@@ -141,14 +126,19 @@ const DoctorDashboard: React.FC = () => {
     fetchData();
   }, [user]);
 
+
+
   const handleAppointmentStatusUpdate = async (appointmentId: string, newStatus: string) => {
     try {
-      // await updateAppointmentStatus(appointmentId, newStatus);
-      setAppointments(prev => 
-        prev.map(apt => 
-          apt.id === appointmentId 
-            ? { ...apt, status: newStatus as any }
-            : apt
+      if (newStatus === 'confirmed') {
+        await confirmAppointment(appointmentId);
+      } else if (newStatus === 'cancelled') {
+        await cancelAppointment(appointmentId);
+      }
+
+      setAppointments(prev =>
+        prev.map(apt =>
+          apt.id === appointmentId ? { ...apt, status: newStatus as any } : apt
         )
       );
       toast.success('Cập nhật trạng thái thành công');
@@ -157,6 +147,7 @@ const DoctorDashboard: React.FC = () => {
       toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
     }
   };
+
 
   const handleProfileUpdate = async () => {
     if (!profile) return;
@@ -293,10 +284,6 @@ const DoctorDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-1">
-                    {getTypeIcon(appointment.type)}
-                    <span className="text-sm text-gray-600 capitalize">{appointment.type}</span>
-                  </div>
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)}`}>
                     {getStatusText(appointment.status)}
                   </span>
@@ -337,13 +324,7 @@ const DoctorDashboard: React.FC = () => {
                   Ngày & Giờ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Loại
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Phí
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Hành động
@@ -352,31 +333,29 @@ const DoctorDashboard: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {appointments.map((appointment) => (
-                <tr key={appointment.id} className="hover:bg-gray-50">
+                <tr key={appointment.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedPatient(appointment)}>
+                  {/* Bệnh nhân */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
                       <div className="text-sm text-gray-500">{appointment.patientEmail}</div>
                     </div>
                   </td>
+
+                  {/* Ngày & Giờ */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{appointment.date}</div>
                     <div className="text-sm text-gray-500">{appointment.time}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {getTypeIcon(appointment.type)}
-                      <span className="ml-2 text-sm text-gray-900 capitalize">{appointment.type}</span>
-                    </div>
-                  </td>
+
+                  {/* Trạng thái */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)}`}>
                       {getStatusText(appointment.status)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {appointment.fee.toLocaleString()} VNĐ
-                  </td>
+
+                  {/* Hành động */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       {appointment.status === 'pending' && (
@@ -414,7 +393,7 @@ const DoctorDashboard: React.FC = () => {
     </div>
   );
 
-   const renderProfile = () => {
+  const renderProfile = () => {
     if (!profile) return null;
     return (
       <div className="space-y-6">
@@ -546,70 +525,82 @@ const DoctorDashboard: React.FC = () => {
   }
 
   return (
-  <div className="min-h-screen bg-gray-50 flex">
-    {/* Sidebar Tabs */}
-    <div className="w-64 bg-white border-r border-gray-200">
-      <div className="px-4 py-6 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-900">Bảng điều khiển</h1>
-        <p className="text-sm text-gray-600 mt-1">Chào mừng, {user?.name}</p>
-      </div>
-      <nav className="flex flex-col space-y-1 px-4 py-4">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`text-left px-3 py-2 rounded-md font-medium text-sm ${
-            activeTab === 'overview'
-              ? 'bg-teal-100 text-teal-700'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-        >
-          Tổng quan
-        </button>
-        <button
-          onClick={() => setActiveTab('appointments')}
-          className={`text-left px-3 py-2 rounded-md font-medium text-sm ${
-            activeTab === 'appointments'
-              ? 'bg-teal-100 text-teal-700'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-        >
-          Lịch hẹn
-        </button>
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`text-left px-3 py-2 rounded-md font-medium text-sm ${
-            activeTab === 'profile'
-              ? 'bg-teal-100 text-teal-700'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-        >
-          Hồ sơ
-        </button>
-        <button
-          onClick={() => setActiveTab('schedule')}
-          className={`text-left px-3 py-2 rounded-md font-medium text-sm ${
-            activeTab === 'schedule'
-              ? 'bg-teal-100 text-teal-700'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
-        >
-          Lịch làm việc
-        </button>
-      </nav>
-    </div>
-
-    {/* Main content */}
-    <div className="flex-1 px-6 py-8">
-      {activeTab === 'overview' && renderOverview()}
-      {activeTab === 'appointments' && renderAppointments()}
-      {activeTab === 'profile' && renderProfile()}
-      {activeTab === 'schedule' && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Tính năng lịch làm việc đang được phát triển</p>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar Tabs */}
+      <div className="w-64 bg-white border-r border-gray-200">
+        <div className="px-4 py-6 border-b border-gray-100">
+          <h1 className="text-xl font-bold text-gray-900">Bảng điều khiển</h1>
+          <p className="text-sm text-gray-600 mt-1">Chào mừng, {user?.name}</p>
         </div>
+        <nav className="flex flex-col space-y-1 px-4 py-4">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`text-left px-3 py-2 rounded-md font-medium text-sm ${activeTab === 'overview'
+              ? 'bg-teal-100 text-teal-700'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            Tổng quan
+          </button>
+          <button
+            onClick={() => setActiveTab('appointments')}
+            className={`text-left px-3 py-2 rounded-md font-medium text-sm ${activeTab === 'appointments'
+              ? 'bg-teal-100 text-teal-700'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            Lịch hẹn
+          </button>
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`text-left px-3 py-2 rounded-md font-medium text-sm ${activeTab === 'profile'
+              ? 'bg-teal-100 text-teal-700'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            Hồ sơ
+          </button>
+          <button
+            onClick={() => setActiveTab('schedule')}
+            className={`text-left px-3 py-2 rounded-md font-medium text-sm ${activeTab === 'schedule'
+              ? 'bg-teal-100 text-teal-700'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            Lịch làm việc
+          </button>
+        </nav>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 px-6 py-8">
+        {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'appointments' && renderAppointments()}
+        {activeTab === 'profile' && renderProfile()}
+        {activeTab === 'schedule' && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Tính năng lịch làm việc đang được phát triển</p>
+          </div>
+        )}
+      </div>
+      {selectedPatient && (
+        <PatientDetailsModal
+          patientName={selectedPatient.patientName}
+          patientEmail={selectedPatient.patientEmail}
+          symptoms={selectedPatient.symptoms}
+          onClose={() => setSelectedPatient(null)}
+          onChat={() => {
+            setSelectedPatient(null);
+            navigate(`/chat/${selectedPatient.id}`);
+          }}
+          onVideoCall={() => {
+            setSelectedPatient(null);
+            navigate(`/video-call/${selectedPatient.id}`);
+          }}
+        />
       )}
     </div>
-  </div>
-);
+  );
 
 };
 

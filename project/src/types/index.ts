@@ -17,13 +17,17 @@ export interface Doctor {
 }
 
 export interface Appointment {
-  id: string;
+  appointmentId: number;
+  userId: string;
+  userName: string;
+  userEmail: string;
   doctorId: string;
-  patientId: string;
-  date: string;
-  time: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
-  type: 'in-person' | 'video' | 'chat';
+  doctorName: string;
+  date: string; // ISO 8601 format
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  symptoms?: string;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface MembershipPlan {
