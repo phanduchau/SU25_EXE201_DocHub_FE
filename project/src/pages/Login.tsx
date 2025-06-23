@@ -28,14 +28,19 @@ const Login: React.FC = () => {
         throw new Error('Token không tồn tại hoặc không hợp lệ');
       }
 
-      login(token); // Lưu token & decode
+      // ✅ Decode token để lấy userId từ "sub"
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userId = payload.sub;
+      const decodedRole = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
 
-const decodedRole =
-  JSON.parse(atob(token.split('.')[1]))[
-    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
-  ];
+      // ✅ Lưu token và userId vào localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('userId', userId);
 
-toast.success('Đăng nhập thành công!');
+      // ✅ Gọi context login
+      login(token);
+
+      toast.success('Đăng nhập thành công!');
 
 if (decodedRole === 'Doctor') {
   navigate('/doctor-dashboard');

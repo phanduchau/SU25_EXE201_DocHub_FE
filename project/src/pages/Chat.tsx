@@ -1,157 +1,147 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Send, Paperclip, Image, Smile } from 'lucide-react';
-import { doctors } from '../data/doctors';
+import { getMessagesByAppointment } from '../apis/chat/chatApi';
+import { createChatConnection } from '../apis/chat/chatHub';
 
 interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'doctor';
-  timestamp: Date;
+  chatId: number;
+  userId: string;
+  message: string;
+  timestamp: string;
 }
 
 const Chat: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Xin chào, tôi có thể giúp gì cho bạn?',
-      sender: 'doctor',
-      timestamp: new Date()
-    }
-  ]);
-  
-  const doctor = doctors.find(d => d.id === id);
-  
-  if (!doctor) {
-    return <div>Không tìm thấy bác sĩ</div>;
-  }
+  const { id } = useParams(); // lấy appointmentId từ URL
+  const appointmentId = Number(id);
+  const token = localStorage.getItem('token') || '';
+  const userId = token ? JSON.parse(atob(token.split('.')[1])).sub : '';
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: message,
-      sender: 'user',
-      timestamp: new Date()
+  // Kết nối SignalR
+  useEffect(() => {
+    const connect = async () => {
+      try {
+        const connection = createChatConnection(appointmentId);
+        connectionRef.current = connection;
+
+        connection.on('ReceiveMessage', (senderId: string, message: string) => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              chatId: Date.now(),
+              userId: senderId,
+              message,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+        });
+
+        await connection.start();
+        console.log('✅ Connected to SignalR');
+      } catch (error) {
+        console.error('❌ Failed to connect to SignalR:', error);
+      }
     };
 
-    setMessages([...messages, newMessage]);
-    setMessage('');
+    if (!isNaN(appointmentId)) {
+      connect();
+    }
+
+    return () => {
+      connectionRef.current?.stop();
+    };
+  }, [appointmentId]);
+
+  // Lấy tin nhắn cũ từ API
+  useEffect(() => {
+    if (isNaN(appointmentId)) {
+      setHasError(true);
+      setLoading(false);
+      return;
+    }
+
+    getMessagesByAppointment(appointmentId)
+      .then((data) => {
+        setMessages(data || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('❌ Lỗi khi lấy tin nhắn:', err);
+        setHasError(true);
+        setLoading(false);
+      });
+  }, [appointmentId]);
+
+  // Cuộn xuống cuối khi có tin mới
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Gửi tin nhắn
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    try {
+      await connectionRef.current?.invoke('SendMessage', String(appointmentId), userId, input);
+      setInput('');
+    } catch (error) {
+      console.error('❌ Gửi tin nhắn lỗi:', error);
+    }
   };
 
+  if (loading) {
+    return <p className="text-center mt-10">Đang tải tin nhắn...</p>;
+  }
+
+  if (hasError || isNaN(appointmentId)) {
+    return <p className="text-center mt-10 text-red-500">Không tìm thấy bác sĩ hoặc cuộc hẹn.</p>;
+  }
+
   return (
-    <div className="h-screen flex">
-      {/* Chat sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">Tin nhắn</h2>
-        </div>
-        
-        <div className="overflow-y-auto h-full">
-          <div className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100">
-            <div className="flex items-center">
-              <img
-                src={doctor.image}
-                alt={doctor.name}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-              <div className="ml-3">
-                <p className="font-medium">{doctor.name}</p>
-                <p className="text-sm text-gray-500">{doctor.specialty}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Chat main */}
-      <div className="flex-1 flex flex-col bg-gray-50">
-        {/* Chat header */}
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center">
-            <img
-              src={doctor.image}
-              alt={doctor.name}
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <div className="ml-3">
-              <p className="font-medium">{doctor.name}</p>
-              <p className="text-sm text-gray-500">{doctor.specialty}</p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-4">
-            {messages.map((msg) => (
+    <div className="max-w-2xl mx-auto p-4">
+      <div className="h-[400px] overflow-y-auto bg-gray-100 rounded p-4">
+        {messages.length === 0 ? (
+          <p className="text-gray-500 text-center">Chưa có tin nhắn nào</p>
+        ) : (
+          messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`mb-2 flex ${String(msg.userId) === String(userId) ? 'justify-end' : 'justify-start'}`}
+            >
               <div
-                key={msg.id}
-                className={`flex ${
-                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                className={`px-4 py-2 rounded max-w-xs ${
+                  String(msg.userId) === String(userId)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white border'
                 }`}
               >
-                <div
-                  className={`max-w-xs md:max-w-md rounded-lg p-3 ${
-                    msg.sender === 'user'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-white border border-gray-200'
-                  }`}
-                >
-                  <p>{msg.text}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      msg.sender === 'user' ? 'text-teal-100' : 'text-gray-500'
-                    }`}
-                  >
-                    {msg.timestamp.toLocaleTimeString()}
-                  </p>
-                </div>
+                <p>{msg.message}</p>
+                <span className="text-[10px] text-gray-300 block text-right">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Chat input */}
-        <div className="bg-white border-t border-gray-200 p-4">
-          <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
-            <button
-              type="button"
-              className="p-2 text-gray-500 hover:text-gray-600"
-            >
-              <Paperclip className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="p-2 text-gray-500 hover:text-gray-600"
-            >
-              <Image className="h-5 w-5" />
-            </button>
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Nhập tin nhắn..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-teal-500"
-            />
-            <button
-              type="button"
-              className="p-2 text-gray-500 hover:text-gray-600"
-            >
-              <Smile className="h-5 w-5" />
-            </button>
-            <button
-              type="submit"
-              className="p-2 bg-teal-500 text-white rounded-full hover:bg-teal-600"
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          </form>
-        </div>
+            </div>
+          ))
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <div className="flex gap-2 mt-4">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className="border p-2 flex-1 rounded"
+          placeholder="Nhập tin nhắn..."
+        />
+        <button onClick={handleSend} className="bg-blue-600 text-white px-4 py-2 rounded">
+          Gửi
+        </button>
       </div>
     </div>
   );
