@@ -78,6 +78,9 @@ const DoctorDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(appointments.length / itemsPerPage);
 
   // Mock data for demonstration
   const mockStats: DoctorStats = {
@@ -332,62 +335,95 @@ const DoctorDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {appointments.map((appointment) => (
-                <tr key={appointment.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedPatient(appointment)}>
-                  {/* Bệnh nhân */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
-                      <div className="text-sm text-gray-500">{appointment.patientEmail}</div>
-                    </div>
-                  </td>
+              {appointments
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((appointment) => (
+                  <tr
+                    key={appointment.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      if (appointment.status === 'confirmed') {
+                        setSelectedPatient(appointment);
+                      } else {
+                        toast.info('Bạn cần xác nhận lịch hẹn trước khi xem chi tiết bệnh nhân.');
+                      }
+                    }}
+                  >
 
-                  {/* Ngày & Giờ */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{appointment.date}</div>
-                    <div className="text-sm text-gray-500">{appointment.time}</div>
-                  </td>
+                    {/* Bệnh nhân */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
+                        <div className="text-sm text-gray-500">{appointment.patientEmail}</div>
+                      </div>
+                    </td>
 
-                  {/* Trạng thái */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)}`}>
-                      {getStatusText(appointment.status)}
-                    </span>
-                  </td>
+                    {/* Ngày & Giờ */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{appointment.date}</div>
+                      <div className="text-sm text-gray-500">{appointment.time}</div>
+                    </td>
 
-                  {/* Hành động */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      {appointment.status === 'pending' && (
-                        <>
+                    {/* Trạng thái */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)}`}>
+                        {getStatusText(appointment.status)}
+                      </span>
+                    </td>
+
+                    {/* Hành động */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        {appointment.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleAppointmentStatusUpdate(appointment.id, 'confirmed')}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleAppointmentStatusUpdate(appointment.id, 'cancelled')}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                        {appointment.status === 'confirmed' && (
                           <button
-                            onClick={() => handleAppointmentStatusUpdate(appointment.id, 'confirmed')}
-                            className="text-green-600 hover:text-green-900"
+                            onClick={() => handleAppointmentStatusUpdate(appointment.id, 'completed')}
+                            className="text-blue-600 hover:text-blue-900"
                           >
                             <CheckCircle className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleAppointmentStatusUpdate(appointment.id, 'cancelled')}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                      {appointment.status === 'confirmed' && (
-                        <button
-                          onClick={() => handleAppointmentStatusUpdate(appointment.id, 'completed')}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
+          <div className="flex justify-center items-center py-4 space-x-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Trang trước
+            </button>
+            <span className="text-sm text-gray-700">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Trang sau
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
