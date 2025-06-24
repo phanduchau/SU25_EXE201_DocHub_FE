@@ -14,53 +14,51 @@ const Login: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    remember: false
+    remember: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      const response = await loginApi(formData.email, formData.password);
+      // ✅ Gọi loginApi với remember
+      const response = await loginApi(formData.email, formData.password, formData.remember);
       const token = response.result?.token;
 
       if (!token) {
         throw new Error('Token không tồn tại hoặc không hợp lệ');
       }
 
-      // ✅ Decode token để lấy userId từ "sub"
+      // ✅ Decode token để lấy userId và role
       const payload = JSON.parse(atob(token.split('.')[1]));
       const userId = payload.sub;
       const decodedRole = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
 
-      // ✅ Lưu token và userId vào localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('userId', userId);
+      // ✅ Lưu userId để dùng sau (token đã được lưu trong loginApi)
+      const storage = formData.remember ? localStorage : sessionStorage;
+      storage.setItem('userId', userId);
 
       // ✅ Gọi context login
       login(token);
-
       toast.success('Đăng nhập thành công!');
 
-if (decodedRole === 'Doctor') {
-  navigate('/doctor-dashboard');
-} else if (decodedRole === 'Admin') {
-  navigate('/admin');
-} else {
-  navigate('/');
-}
-     } catch (error: any) {
-  console.error('Đăng nhập lỗi:', error);
-
-  const message =
-    error.response?.data?.errorMessages?.[0] ||
-    error.response?.data?.message ||
-    error.message ||
-    'Đăng nhập thất bại';
-
-  toast.error(`Đăng nhập thất bại: ${message}`);
-}
-
+      // ✅ Điều hướng theo vai trò
+      if (decodedRole === 'Doctor') {
+        navigate('/doctor-dashboard');
+      } else if (decodedRole === 'Admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error('Đăng nhập lỗi:', error);
+      const message =
+        error.response?.data?.errorMessages?.[0] ||
+        error.response?.data?.message ||
+        error.message ||
+        'Đăng nhập thất bại';
+      toast.error(`Đăng nhập thất bại: ${message}`);
+    }
   };
 
   return (
@@ -78,6 +76,7 @@ if (decodedRole === 'Doctor') {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Email input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
@@ -100,6 +99,7 @@ if (decodedRole === 'Doctor') {
               </div>
             </div>
 
+            {/* Password input */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Mật khẩu
@@ -130,6 +130,7 @@ if (decodedRole === 'Doctor') {
               </div>
             </div>
 
+            {/* Remember me */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -158,6 +159,7 @@ if (decodedRole === 'Doctor') {
             </div>
           </form>
 
+          {/* Social login UI (nếu cần sau này) */}
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">

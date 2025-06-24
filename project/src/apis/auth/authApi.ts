@@ -1,11 +1,41 @@
 import axiosClient from '../axiosClient';
 
-export const loginApi = async (email: string, password: string) => {
+export const loginApi = async (email: string, password: string, remember: boolean) => {
   const response = await axiosClient.post('/Auth/login', {
     username: email,
     password: password,
   });
-  return response.data;
+
+  const data = response.data;
+  //console.log('Login response:', data);
+
+  const token = data.result?.token;
+  const refeshToken = data.result?.refeshToken;
+
+  if (!token || !refeshToken) {
+    throw new Error('Token hoặc refreshToken không hợp lệ');
+  }
+
+  if (remember) {
+    localStorage.setItem('token', token);
+    localStorage.setItem('refeshToken', refeshToken);
+    localStorage.setItem('remember', 'true');
+  } else {
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('refeshToken', refeshToken);
+    localStorage.setItem('remember', 'false');
+  }
+
+  return data;
+};
+
+// ✅ Gọi /refresh-token để lấy token mới
+export const refreshTokenApi = async () => {
+  const refreshToken = sessionStorage.getItem('refeshToken') || localStorage.getItem('refeshToken');
+  const response = await axiosClient.post(`/Auth/refresh-token`, {
+    refreshToken,
+  });
+  return response.data; // trả về: { token, refreshToken }  
 };
 
 export const forgotPassword = async (email: string) => {
