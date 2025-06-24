@@ -26,7 +26,12 @@ const Appointments: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
+  useEffect(() => {
+    setCurrentPage(1); // reset về trang đầu khi thay filter
+  }, [filter]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -61,10 +66,6 @@ const Appointments: React.FC = () => {
 
 
 
-  const filteredAppointments = appointments.filter((apt) =>
-    filter === 'all' ? true : apt.status === filter
-  );
-
   const appointmentsToday = appointments.filter(
     apt => format(new Date(apt.appointmentDate), 'yyyy-MM-dd') === format(selectedDate!, 'yyyy-MM-dd')
   );
@@ -84,6 +85,16 @@ const Appointments: React.FC = () => {
       </span>
     );
   };
+
+  const filteredAppointments = appointments.filter((apt) =>
+    filter === 'all' ? true : apt.status === filter
+  );
+
+  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
@@ -125,7 +136,7 @@ const Appointments: React.FC = () => {
 
               {/* Appointment List */}
               <div className="divide-y divide-gray-200">
-                {filteredAppointments.map((apt) => (
+                {paginatedAppointments.map((apt) => (
                   <div
                     key={apt.appointmentId}
                     onClick={() => apt.status === 'confirmed' && setSelectedAppointment(apt)}
@@ -192,6 +203,27 @@ const Appointments: React.FC = () => {
                 )}
               </div>
             </div>
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center py-4 space-x-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border rounded disabled:opacity-50"
+                >
+                  Trang trước
+                </button>
+                <span className="text-sm text-gray-700">
+                  Trang {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border rounded disabled:opacity-50"
+                >
+                  Trang sau
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Calendar Sidebar */}
