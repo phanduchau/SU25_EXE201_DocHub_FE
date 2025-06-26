@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, MessageCircle, Video, User, Mail, Stethoscope } from 'lucide-react';
+import { X, MessageCircle, Video, User, Mail, Stethoscope, AlertCircle  } from 'lucide-react';
 
 interface Props {
   patientName: string;
