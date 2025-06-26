@@ -26,12 +26,14 @@ export const updateDoctorProfile = async (doctorId: string, data: any) => {
     yearsOfExperience: data.yearsOfExperience,
     bio: data.bio,
     hospitalName: data.hospitalName,
+    imageDoctor: data.imageDoctor, // thêm dòng này
     isActive: true
   };
 
   const response = await axiosClient.put(`/Doctor/${doctorId}`, payload);
   return response.data;
 };
+
 
 export const getDoctorProfileByUserId = async (userId: string) => {
   const res = await axiosClient.get(`/Doctor/user/${userId}`);

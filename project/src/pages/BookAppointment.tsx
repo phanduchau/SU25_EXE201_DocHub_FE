@@ -13,7 +13,7 @@ interface Doctor {
   userName: string;
   userEmail: string;
   userPhone: string;
-  userImageUrl: string | null;
+  imageDoctor: string | null;
   specialization: string;
   yearsOfExperience: number;
   bio: string;
@@ -111,7 +111,7 @@ const BookAppointment: React.FC = () => {
                 <h2 className="text-lg font-semibold mb-4">Thông tin bác sĩ</h2>
                 <div className="flex items-center mb-6">
                   <img
-                    src={doctor.userImageUrl ?? '/default-avatar.png'}
+                    src={doctor.imageDoctor ?? '/default-avatar.png'}
                     alt={doctor.userName}
                     className="w-20 h-20 rounded-full object-cover mr-4"
                   />

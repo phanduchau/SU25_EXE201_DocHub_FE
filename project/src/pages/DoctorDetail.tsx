@@ -10,7 +10,7 @@ interface Doctor {
   userName: string;
   userEmail: string;
   userPhone: string;
-  userImageUrl: string | null;
+  imageDoctor: string | null;
   specialization: string;
   yearsOfExperience: number;
   bio: string;
@@ -56,7 +56,7 @@ const DoctorDetail: React.FC = () => {
         {/* Profile Card */}
         <div className="bg-white rounded-xl shadow-md p-6 flex flex-col md:flex-row gap-6 items-center">
           <img
-            src={doctor.userImageUrl ?? 'https://via.placeholder.com/150'}
+            src={doctor.imageDoctor ?? 'https://via.placeholder.com/150'}
             alt={doctor.userName}
             className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover shadow-md border-4 border-white"
           />

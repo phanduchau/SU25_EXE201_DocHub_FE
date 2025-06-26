@@ -23,7 +23,7 @@ const DoctorsList: React.FC = () => {
           specialty: doc.specialization || '',
           hospital: doc.hospitalName || '',
           experience: doc.yearsOfExperience || 0,
-          image: doc.userImageUrl || 'https://via.placeholder.com/150',
+          image: doc.imageDoctor || 'https://via.placeholder.com/150',
           rating: doc.rating || 4.5 // fallback nếu không có rating
         }));
         setAllDoctors(mapped);

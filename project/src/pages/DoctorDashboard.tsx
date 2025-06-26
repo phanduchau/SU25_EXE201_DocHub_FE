@@ -26,6 +26,7 @@ import { toast } from 'react-toastify';
 import { getAppointmentsByDoctorId, confirmAppointment, cancelAppointment } from '../apis/booking/appointmentApi';
 import PatientDetailsModal from '../components/PatientDetailsModal';
 import { useNavigate } from 'react-router-dom';
+import { uploadImageToCloudinary } from '../utils/uploadImageToCloudinary';
 
 interface DoctorStats {
   totalPatients: number;
@@ -58,6 +59,7 @@ interface DoctorProfile {
   hospitalName: string;
   rating: number | null;
   isActive: boolean;
+  imageDoctor: string | null;
 }
 
 
@@ -81,6 +83,8 @@ const DoctorDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(appointments.length / itemsPerPage);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+
 
   // Mock data for demonstration
   const mockStats: DoctorStats = {
@@ -153,24 +157,32 @@ const DoctorDashboard: React.FC = () => {
 
 
   const handleProfileUpdate = async () => {
-    if (!profile) return;
-    try {
-      const payload = {
-        specialization: profile.specialization,
-        yearsOfExperience: profile.yearsOfExperience,
-        bio: profile.bio,
-        hospitalName: profile.hospitalName,
-        isActive: true
-      };
-      await updateDoctorProfile(profile.doctorId.toString(), payload);
-      setIsEditingProfile(false);
-      toast.success('Cập nhật thông tin thành công');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Có lỗi xảy ra khi cập nhật thông tin');
-    }
-  };
+  if (!profile) return;
 
+  try {
+    let imageUrl = profile.imageDoctor; // giữ lại ảnh cũ nếu không chọn ảnh mới
+
+    if (selectedImage) {
+      imageUrl = await uploadImageToCloudinary(selectedImage); // upload Cloudinary
+    }
+
+    const payload = {
+      specialization: profile.specialization,
+      yearsOfExperience: Number(profile.yearsOfExperience), // đảm bảo là number
+      bio: profile.bio,
+      hospitalName: profile.hospitalName,
+      imageDoctor: imageUrl,
+      isActive: true
+    };
+
+    await updateDoctorProfile(profile.doctorId.toString(), payload);
+    toast.success("Cập nhật hồ sơ thành công");
+    setIsEditingProfile(false);
+  } catch (err) {
+    toast.error("Cập nhật thất bại");
+    console.error(err);
+  }
+};
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -455,7 +467,7 @@ const DoctorDashboard: React.FC = () => {
           <div className="p-6">
             <div className="flex items-center space-x-6 mb-6">
               <img
-                src={profile.userImageUrl || ''}
+                src={profile.imageDoctor || ''}
                 alt={profile.userName}
                 className="w-24 h-24 rounded-full object-cover"
               />
@@ -542,6 +554,26 @@ const DoctorDashboard: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
+              {isEditingProfile && (
+  <div className="md:col-span-2">
+    <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh đại diện</label>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          setSelectedImage(file);
+          setProfile((prev) =>
+            prev ? { ...prev, imageDoctor: URL.createObjectURL(file) } : null
+          );
+        }
+      }}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+    />
+  </div>
+)}
+
             </div>
           </div>
         </div>

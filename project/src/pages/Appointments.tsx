@@ -11,7 +11,7 @@ import { toast } from 'react-toastify';
 interface Appointment {
   appointmentId: string;
   doctorName: string;
-  doctorSpecialty?: string;
+  imageDoctor: string | null;
   doctorImage?: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -48,7 +48,7 @@ const Appointments: React.FC = () => {
             appointmentId: item.appointmentId,
             doctorName: item.doctorName || 'Không rõ',
             doctorSpecialty: item.specialization,
-            doctorImage: '', // placeholder nếu chưa có
+            imageDoctor: '', // placeholder nếu chưa có
             appointmentDate: item.appointmentDate,
             appointmentTime: format(new Date(item.appointmentDate), 'HH:mm'),
             status,
@@ -145,13 +145,13 @@ const Appointments: React.FC = () => {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center mb-4 md:mb-0">
                         <img
-                          src={apt.doctorImage}
+                          src={apt.imageDoctor || 'https://via.placeholder.com/150'}
                           alt={apt.doctorName}
                           className="w-12 h-12 rounded-full object-cover mr-4"
                         />
                         <div>
                           <h3 className="font-medium text-gray-900">{apt.doctorName}</h3>
-                          <p className="text-sm text-gray-600">{apt.doctorSpecialty}</p>
+                          <p className="text-sm text-gray-600">{apt.specialization}</p>
                         </div>
                       </div>
 
