@@ -4,10 +4,12 @@ import Button from '../components/Button';
 import { useAuthContext } from '../contexts/AuthContext';
 import { getUserById, updateUserById } from '../apis/users/userApi';
 import { toast } from 'react-toastify';
+import { uploadImageToCloudinary } from '../utils/uploadImageToCloudinary';
 
 const Profile: React.FC = () => {
   const { user } = useAuthContext(); // chỉ dùng để lấy user.sub
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -33,7 +35,9 @@ const Profile: React.FC = () => {
             phone: data.phoneNumber || '',
             address: data.address || '',
             dateOfBirth: data.dateOfBirth?.split('T')[0] || '',
-            avatar: data.imageUrl || 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
+            avatar:
+              data.imageUrl ||
+              'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg',
           });
         } catch (error) {
           console.error('❌ Lỗi khi lấy thông tin người dùng:', error);
@@ -53,18 +57,30 @@ const Profile: React.FC = () => {
       return;
     }
 
+    let imageUrl = profileData.avatar;
+
+    if (selectedImage) {
+      try {
+        imageUrl = await uploadImageToCloudinary(selectedImage);
+      } catch (error) {
+        toast.error('Tải ảnh lên thất bại.');
+        console.error(error);
+        return;
+      }
+    }
+
     const updatedUser = {
       fullName: profileData.name,
       address: profileData.address,
       dateOfBirth: new Date(profileData.dateOfBirth).toISOString(),
-      imageUrl: profileData.avatar,
+      imageUrl,
       phoneNumber: profileData.phone,
     };
 
     console.log('📤 Gửi dữ liệu cập nhật:', updatedUser);
 
     try {
-      await updateUserById(user.sub, updatedUser); // ✅ API PUT
+      await updateUserById(user.sub, updatedUser);
       toast.success('Cập nhật thành công!');
       setIsEditing(false);
     } catch (error) {
@@ -99,10 +115,18 @@ const Profile: React.FC = () => {
                       <Camera className="h-5 w-5" />
                     </button>
                     <input
-                      type="text"
-                      value={profileData.avatar}
-                      onChange={(e) => setProfileData({ ...profileData, avatar: e.target.value })}
-                      placeholder="Nhập URL ảnh đại diện"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setSelectedImage(file);
+                          setProfileData((prev) => ({
+                            ...prev,
+                            avatar: URL.createObjectURL(file),
+                          }));
+                        }
+                      }}
                       className="mt-2 w-64 text-sm px-3 py-2 border rounded-md"
                     />
                   </>
@@ -113,7 +137,9 @@ const Profile: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Họ tên */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Họ và tên
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-gray-400" />
@@ -121,7 +147,9 @@ const Profile: React.FC = () => {
                   <input
                     type="text"
                     value={profileData.name}
-                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, name: e.target.value })
+                    }
                     disabled={!isEditing}
                     className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
@@ -130,7 +158,9 @@ const Profile: React.FC = () => {
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-gray-400" />
@@ -146,7 +176,9 @@ const Profile: React.FC = () => {
 
               {/* Số điện thoại */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Số điện thoại
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Phone className="h-5 w-5 text-gray-400" />
@@ -154,7 +186,9 @@ const Profile: React.FC = () => {
                   <input
                     type="tel"
                     value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, phone: e.target.value })
+                    }
                     disabled={!isEditing}
                     className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
@@ -163,7 +197,9 @@ const Profile: React.FC = () => {
 
               {/* Ngày sinh */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ngày sinh
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Calendar className="h-5 w-5 text-gray-400" />
@@ -171,7 +207,12 @@ const Profile: React.FC = () => {
                   <input
                     type="date"
                     value={profileData.dateOfBirth}
-                    onChange={(e) => setProfileData({ ...profileData, dateOfBirth: e.target.value })}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        dateOfBirth: e.target.value,
+                      })
+                    }
                     disabled={!isEditing}
                     className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
@@ -180,7 +221,9 @@ const Profile: React.FC = () => {
 
               {/* Địa chỉ */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Địa chỉ
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin className="h-5 w-5 text-gray-400" />
@@ -188,7 +231,12 @@ const Profile: React.FC = () => {
                   <input
                     type="text"
                     value={profileData.address}
-                    onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        address: e.target.value,
+                      })
+                    }
                     disabled={!isEditing}
                     className="block w-full pl-10 pr-3 py-2 border rounded-md disabled:bg-gray-50"
                   />
@@ -200,7 +248,11 @@ const Profile: React.FC = () => {
             <div className="mt-6 flex justify-end space-x-4">
               {isEditing ? (
                 <>
-                  <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                  >
                     Hủy
                   </Button>
                   <Button type="submit" variant="primary">
@@ -208,7 +260,11 @@ const Profile: React.FC = () => {
                   </Button>
                 </>
               ) : (
-                <Button type="button" variant="primary" onClick={() => setIsEditing(true)}>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setIsEditing(true)}
+                >
                   Chỉnh sửa
                 </Button>
               )}
@@ -219,7 +275,11 @@ const Profile: React.FC = () => {
           <div className="border-t border-gray-200 p-6">
             <h2 className="text-lg font-semibold mb-4">Bảo mật</h2>
             <div className="space-y-4">
-              <Button variant="outline" to="/change-password" className="w-full md:w-auto">
+              <Button
+                variant="outline"
+                to="/change-password"
+                className="w-full md:w-auto"
+              >
                 Đổi mật khẩu
               </Button>
             </div>
