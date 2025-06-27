@@ -72,7 +72,7 @@ const DoctorDetail: React.FC = () => {
   const handleShowLess = () => {
     setVisibleCount(pageSize);
     window.scrollTo({
-      top: document.querySelector('#feedback-section')?.offsetTop || 0,
+      top: (document.querySelector('#feedback-section') as HTMLElement | null)?.offsetTop || 0,
       behavior: 'smooth',
     });
   };
