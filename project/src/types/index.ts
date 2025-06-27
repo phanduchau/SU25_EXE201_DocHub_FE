@@ -107,3 +107,19 @@ export interface RevenueData {
   appointments: number;
   percentage: number;
 }
+
+export interface Feedback {
+  feedbackId: number;
+  doctorId: number;
+  name: string;
+  initials: string;
+  content: string;
+  rating: number;
+  date: string;
+}
+
+export interface CreateFeedbackDTO {
+  doctorId: number;
+  content: string;
+  rating: number;
+}

@@ -1,5 +1,5 @@
 import axiosClient from '../axiosClient';
-import { Doctor } from '../../types';
+import { Doctor, CreateFeedbackDTO, Feedback } from '../../types';
 
 export const getAllDoctors = async () => {
   const res = await axiosClient.get('/Doctor');
@@ -40,3 +40,12 @@ export const getDoctorProfileByUserId = async (userId: string) => {
   return res.data.result; 
 };
 
+export const getDoctorFeedback = async (doctorId: string): Promise<Feedback[]> => {
+  const res = await axiosClient.get(`/Feedback/doctor/${doctorId}`);
+  return res.data.result;
+};
+
+export const addDoctorFeedback = async (data: CreateFeedbackDTO): Promise<Feedback> => {
+  const res = await axiosClient.post(`/Feedback`, data);
+  return res.data.result;
+};
