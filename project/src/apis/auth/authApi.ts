@@ -70,3 +70,22 @@ export const confirmEmailApi = async (data: { email: string; token: string }) =>
   return response.data; // Trả về object có `isSuccess`, `message`, `statusCode`
 };
 
+export const changePasswordApi = async (oldPassword: string, newPassword: string) => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+
+  const response = await axiosClient.post(
+    '/Auth/change-password',
+    {
+      oldPassword,
+      newPassword
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+

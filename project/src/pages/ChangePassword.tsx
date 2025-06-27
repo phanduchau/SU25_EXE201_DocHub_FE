@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
+import { changePasswordApi } from '../apis//auth/authApi';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const ChangePassword: React.FC = () => {
   const [showPasswords, setShowPasswords] = useState({
@@ -15,11 +18,35 @@ const ChangePassword: React.FC = () => {
     confirmPassword: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement password change logic
-    console.log('Change password:', formData);
-  };
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (formData.newPassword !== formData.confirmPassword) {
+    toast.error('Mật khẩu xác nhận không khớp.');
+    return;
+  }
+
+  try {
+    const res = await changePasswordApi(formData.currentPassword, formData.newPassword);
+    if (res.isSuccess) {
+      toast.success(res.result?.message || 'Đổi mật khẩu thành công.');
+      // Optionally clear fields:
+      setFormData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      navigate('/profile');
+    } else {
+      toast.error(res.result?.message || 'Đổi mật khẩu thất bại.');
+    }
+  } catch (err: any) {
+    console.error(err);
+    toast.error('Có lỗi xảy ra khi đổi mật khẩu.');
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
