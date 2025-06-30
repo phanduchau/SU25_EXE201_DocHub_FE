@@ -1,81 +1,90 @@
+// src/pages/MembershipPage.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, 
   CreditCard,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  QrCode,
+  Smartphone
 } from 'lucide-react';
+import VietQRPayment from '../components/VietQRPayment';
 
-// Types based on existing data structure
 interface MembershipPlan {
-  id: string;
+  planId: number;
   name: string;
-  price: number;
+  description: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
   features: string[];
+  isActive: boolean;
   recommended?: boolean;
 }
 
-interface CreatePaymentRequest {
-  planId: number; // Change from string to number
-  billingCycle: 'Monthly' | 'Yearly';
-  paymentMethod: 'VNPay' | 'MoMo' | 'Banking'; // Update to match backend validation
-}
-
 const MembershipPage: React.FC = () => {
-  const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [billingCycle, setBillingCycle] = useState<'Monthly' | 'Yearly'>('Monthly');
-  const [paymentMethod, setPaymentMethod] = useState<'VNPay' | 'MoMo' | 'Banking'>('VNPay');
+  const [paymentMethod, setPaymentMethod] = useState<'VietQR' | 'VNPay' | 'MoMo'>('VietQR');
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [showPayment, setShowPayment] = useState(false);
+  const [currentSubscription, setCurrentSubscription] = useState<any>(null);
 
-  // Use existing membership data structure
+  // Load membership plans
   useEffect(() => {
-    const membershipPlans: MembershipPlan[] = [
-      {
-        id: '1',
-        name: 'Gói cơ bản',
-        price: 50,
-        features: [
-          'Nhận tư vấn từ một bác sĩ mỗi tháng',
-          'Truy cập thông tin y tế cơ bản',
-          'Thông báo nhắc nhở lịch khám định kỳ',
-          'Lưu trữ hồ sơ y tế cá nhân'
-        ]
-      },
-      {
-        id: '2',
-        name: 'Gói tiêu chuẩn',
-        price: 100,
-        features: [
-          'Tất cả tính năng của gói Cơ bản',
-          'Tư vấn không giới hạn với 3 bác sĩ',
-          'Ưu tiên đặt lịch khám',
-          'Thông báo nhắc nhở dùng thuốc',
-          'Hỗ trợ tư vấn qua video call',
-          'Giảm 5% phí khám'
-        ],
-        recommended: true
-      },
-      {
-        id: '3',
-        name: 'Gói thành viên',
-        price: 250,
-        features: [
-          'Tất cả tính năng của gói Tiêu chuẩn',
-          'Tư vấn không giới hạn với tất cả bác sĩ',
-          'Ưu tiên cao nhất khi đặt lịch khám',
-          'Thông báo nhắc nhở tự động',
-          'Hỗ trợ tư vấn 24/7',
-          'Giảm 10% phí khám',
-          'Báo cáo sức khỏe định kỳ'
-        ]
+    const loadPlans = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/subscription/plans', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+        if (result.isSuccess) {
+          setPlans(result.result);
+          // Set default to recommended plan
+          const recommendedPlan = result.result.find((p: MembershipPlan) => p.recommended);
+          if (recommendedPlan) {
+            setSelectedPlan(recommendedPlan.planId);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading plans:', error);
+      } finally {
+        setLoading(false);
       }
-    ];
-    setPlans(membershipPlans);
-    setSelectedPlan(membershipPlans[1].id); // Default to recommended plan
+    };
+
+    loadPlans();
   }, []);
 
-  const handleCreatePayment = async () => {
+  // Check existing subscription
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/subscription/user-subscription', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+        if (result.isSuccess && result.result) {
+          setCurrentSubscription(result.result);
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+      }
+    };
+
+    checkSubscription();
+  }, []);
+
+  const handleCreatePayment = () => {
     if (!selectedPlan) {
       alert('Vui lòng chọn gói membership');
       return;
@@ -89,367 +98,342 @@ const MembershipPage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      const paymentRequest: CreatePaymentRequest = {
-        planId: parseInt(selectedPlan), // Convert to int to match BE
-        billingCycle,
-        paymentMethod
-      };
-
-      console.log('Making payment request:', paymentRequest);
-      console.log('API URL:', 'https://localhost:7057/api/subscription/payment/create-payment-url');
-
-      const response = await fetch('https://localhost:7057/api/subscription/payment/create-payment-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(paymentRequest)
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        // Log response details for debugging
-        const responseText = await response.text();
-        console.error('Error response:', responseText);
-        
-        if (response.status === 401) {
-          alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-          return;
-        } else if (response.status === 404) {
-          alert('API endpoint không tìm thấy. Vui lòng kiểm tra server đã chạy chưa');
-          return;
-        } else if (response.status === 500) {
-          alert('Lỗi server nội bộ. Vui lòng liên hệ admin');
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (data.isSuccess && data.result?.paymentUrl) {
-        // Store transaction info for tracking
-        localStorage.setItem('pendingPayment', JSON.stringify({
-          transactionRef: data.result.transactionRef,
-          planName: data.result.planName,
-          amount: data.result.amount,
-          billingCycle: data.result.billingCycle,
-          timestamp: new Date().toISOString()
-        }));
-
-        // Redirect to payment gateway
-        window.location.href = data.result.paymentUrl;
-      } else {
-        const errorMessage = data.errorMessages?.[0] || 'Có lỗi xảy ra khi tạo thanh toán';
-        alert(errorMessage);
-        
-        // Handle specific error cases
-        if (errorMessage.includes('đã có gói thành viên')) {
-          setTimeout(() => {
-            window.location.href = '/subscription/status';
-          }, 2000);
-        }
-      }
-    } catch (error: unknown) {
-      console.error('Payment creation error:', error);
-      
-      // Type guard để check error type
-      if (error instanceof Error) {
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          alert('Không thể kết nối đến server. Vui lòng kiểm tra:\n1. Server đã chạy chưa?\n2. URL có đúng không?\n3. CORS có được cấu hình không?');
-        } else {
-          alert(`Có lỗi xảy ra: ${error.message}`);
-        }
-      } else {
-        alert('Có lỗi xảy ra. Vui lòng thử lại sau');
-      }
-    } finally {
-      setLoading(false);
-    }
+    setShowPayment(true);
   };
 
+  const handlePaymentCreated = (paymentData: any) => {
+    console.log('Payment created:', paymentData);
+    // Payment component handles the flow
+  };
+
+  const getSelectedPlan = () => {
+    return plans.find(p => p.planId === selectedPlan);
+  };
+
+  const getPrice = (plan: MembershipPlan) => {
+    return billingCycle === 'Yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+  };
+
+  const getSavings = (plan: MembershipPlan) => {
+    const monthlyTotal = plan.monthlyPrice * 12;
+    const yearlySavings = monthlyTotal - plan.yearlyPrice;
+    return yearlySavings;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  // If user already has subscription
+  if (currentSubscription && currentSubscription.status === 'Active') {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              You're Already a Member!
+            </h1>
+            <p className="text-gray-600 mb-4">
+              You have an active {currentSubscription.planName} subscription
+            </p>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="text-sm text-green-800">
+                <p><strong>Plan:</strong> {currentSubscription.planName}</p>
+                <p><strong>Billing:</strong> {currentSubscription.billingCycle}</p>
+                <p><strong>Valid until:</strong> {new Date(currentSubscription.endDate).toLocaleDateString('vi-VN')}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show payment component
+  if (showPayment && selectedPlan) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="mb-6">
+            <button
+              onClick={() => setShowPayment(false)}
+              className="text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              ← Back to Plans
+            </button>
+          </div>
+          <VietQRPayment
+            planId={selectedPlan}
+            billingCycle={billingCycle}
+            onPaymentCreated={handlePaymentCreated}
+            onClose={() => setShowPayment(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-teal-50 py-10 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-12 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Gói thành viên</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Cung cấp dịch vụ tốt nhất cho người dùng
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            Choose Your Membership Plan
+          </h1>
+          <p className="text-lg text-gray-600">
+            Get access to professional healthcare consultations and premium features
           </p>
         </div>
-        
-        {/* Membership Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {plans.map((plan) => (
-            <div 
-              key={plan.id}
-              onClick={() => setSelectedPlan(plan.id)}
-              className={`rounded-xl shadow-md overflow-hidden transition-all hover:shadow-lg cursor-pointer ${
-                plan.recommended 
-                  ? 'border-2 border-teal-500 transform scale-105' 
-                  : 'border border-gray-200'
-              } ${
-                selectedPlan === plan.id 
-                  ? 'ring-2 ring-teal-600 ring-offset-2' 
-                  : ''
+
+        {/* Billing Toggle */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white p-1 rounded-lg shadow-sm border">
+            <button
+              onClick={() => setBillingCycle('Monthly')}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                billingCycle === 'Monthly'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('Yearly')}
+              className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                billingCycle === 'Yearly'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Yearly
+              <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                Save up to 20%
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Plans Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {plans.map((plan) => (
+            <div
+              key={plan.planId}
+              className={`bg-white rounded-xl shadow-sm border-2 transition-all cursor-pointer ${
+                selectedPlan === plan.planId
+                  ? 'border-blue-500 ring-2 ring-blue-200'
+                  : 'border-gray-200 hover:border-blue-300'
+              } ${plan.recommended ? 'relative' : ''}`}
+              onClick={() => setSelectedPlan(plan.planId)}
+            >
               {plan.recommended && (
-                <div className="bg-teal-500 text-white text-center py-1 font-medium text-sm">
-                  Gói được đề xuất
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded-full">
+                    Recommended
+                  </span>
                 </div>
               )}
-              
-              <div className="p-6 bg-teal-50">
-                <h3 className="text-xl font-bold text-center mb-2">{plan.name}</h3>
-                <div className="text-center">
-                  <span className="text-3xl font-bold text-teal-700">{plan.price.toLocaleString()}k</span>
-                  <span className="text-teal-600">/tháng</span>
+
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
+                
+                <div className="mb-6">
+                  <div className="flex items-baseline">
+                    <span className="text-3xl font-bold text-gray-900">
+                      {getPrice(plan).toLocaleString('vi-VN')}
+                    </span>
+                    <span className="text-gray-500 ml-1">VND</span>
+                    <span className="text-gray-400 ml-2">
+                      /{billingCycle === 'Monthly' ? 'month' : 'year'}
+                    </span>
+                  </div>
+                  {billingCycle === 'Yearly' && getSavings(plan) > 0 && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Save {getSavings(plan).toLocaleString('vi-VN')} VND per year
+                    </p>
+                  )}
                 </div>
-              </div>
-              
-              <div className="p-6 bg-white">
-                <ul className="space-y-3">
+
+                <ul className="space-y-3 mb-6">
                   {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start text-sm">
-                      <CheckCircle className="h-5 w-5 text-teal-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span>{feature}</span>
+                    <li key={index} className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                      <span className="text-sm text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
-                
-                <div className="mt-6">
-                  <button 
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${
-                      selectedPlan === plan.id
-                        ? 'bg-teal-600 text-white'
-                        : plan.recommended 
-                        ? 'bg-teal-600 text-white hover:bg-teal-700' 
-                        : 'border-2 border-teal-600 text-teal-600 hover:bg-teal-50'
-                    }`}
-                  >
-                    {selectedPlan === plan.id ? 'Đã chọn' : 'Thanh toán'}
-                  </button>
+
+                <div className={`w-full py-2 px-4 rounded-lg border-2 transition-colors ${
+                  selectedPlan === plan.planId
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-400'
+                }`}>
+                  <div className="text-center text-sm font-medium">
+                    {selectedPlan === plan.planId ? 'Selected' : 'Select Plan'}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Payment Options */}
+        {/* Payment Method Selection */}
         {selectedPlan && (
-          <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 mb-8">
-            <h2 className="text-2xl font-bold mb-6 text-center">Thông tin thanh toán</h2>
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Choose Payment Method
+            </h3>
             
-            {/* Selected Plan Summary */}
-            <div className="bg-teal-50 rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Gói đã chọn:</span>
-                <span className="font-bold text-teal-700">
-                  {plans.find(p => p.id === selectedPlan)?.name}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mt-2">
-                <span className="font-medium">Giá:</span>
-                <span className="font-bold text-teal-700">
-                  {plans.find(p => p.id === selectedPlan)?.price.toLocaleString()}k VND/tháng
-                </span>
-              </div>
-            </div>
-
-            {/* Billing Cycle */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chu kỳ thanh toán
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setBillingCycle('Monthly')}
-                  className={`p-3 border-2 rounded-lg transition-all ${
-                    billingCycle === 'Monthly'
-                      ? 'border-teal-600 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  Hàng tháng
-                </button>
-                <button
-                  onClick={() => setBillingCycle('Yearly')}
-                  className={`p-3 border-2 rounded-lg transition-all relative ${
-                    billingCycle === 'Yearly'
-                      ? 'border-teal-600 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  Hàng năm
-                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                    Tiết kiệm 10%
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* VietQR */}
+              <div
+                className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                  paymentMethod === 'VietQR'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-300'
+                }`}
+                onClick={() => setPaymentMethod('VietQR')}
+              >
+                <div className="flex items-center mb-2">
+                  <QrCode className="w-6 h-6 text-blue-600 mr-2" />
+                  <span className="font-medium text-gray-900">VietQR</span>
+                  <span className="ml-auto text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    Recommended
                   </span>
-                </button>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Scan QR code with your banking app
+                </p>
+                <div className="flex items-center mt-2 text-xs text-gray-500">
+                  <Smartphone className="w-3 h-3 mr-1" />
+                  Fast & Secure
+                </div>
+              </div>
+
+              {/* VNPay */}
+              <div
+                className={`border-2 rounded-lg p-4 cursor-pointer transition-all opacity-50 ${
+                  paymentMethod === 'VNPay'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200'
+                }`}
+                // onClick={() => setPaymentMethod('VNPay')} // Disabled for now
+              >
+                <div className="flex items-center mb-2">
+                  <CreditCard className="w-6 h-6 text-blue-600 mr-2" />
+                  <span className="font-medium text-gray-900">VNPay</span>
+                  <span className="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    Coming Soon
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Pay with credit/debit card
+                </p>
+              </div>
+
+              {/* MoMo */}
+              <div
+                className={`border-2 rounded-lg p-4 cursor-pointer transition-all opacity-50 ${
+                  paymentMethod === 'MoMo'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200'
+                }`}
+                // onClick={() => setPaymentMethod('MoMo')} // Disabled for now
+              >
+                <div className="flex items-center mb-2">
+                  <Smartphone className="w-6 h-6 text-pink-600 mr-2" />
+                  <span className="font-medium text-gray-900">MoMo</span>
+                  <span className="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    Coming Soon
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Pay with MoMo e-wallet
+                </p>
               </div>
             </div>
-
-            {/* Payment Method */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phương thức thanh toán
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setPaymentMethod('VNPay')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    paymentMethod === 'VNPay'
-                      ? 'border-teal-600 bg-teal-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-center mb-2">
-                    <CreditCard className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <div className="font-medium">VNPay</div>
-                  <div className="text-sm text-gray-600">Thẻ ATM, Visa, MasterCard</div>
-                </button>
-
-                <button
-                  onClick={() => setPaymentMethod('MoMo')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    paymentMethod === 'MoMo'
-                      ? 'border-pink-600 bg-pink-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-center mb-2">
-                    <div className="w-8 h-8 bg-pink-600 rounded-full flex items-center justify-center text-white font-bold">
-                      M
-                    </div>
-                  </div>
-                  <div className="font-medium">MoMo</div>
-                  <div className="text-sm text-gray-600">Ví điện tử MoMo</div>
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              onClick={handleCreatePayment}
-              disabled={loading}
-              className="w-full bg-teal-600 text-white py-4 px-6 rounded-lg font-medium hover:bg-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Đang xử lý...
-                </>
-              ) : (
-                'Thanh toán ngay'
-              )}
-            </button>
           </div>
         )}
-        
-        {/* Comparison Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-          <div className="p-8">
-            <h2 className="text-2xl font-bold mb-6 text-center">So sánh các gói thành viên</h2>
+
+        {/* Order Summary & Checkout */}
+        {selectedPlan && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Order Summary
+            </h3>
             
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-4 px-4">Tính năng</th>
-                    <th className="text-center py-4 px-4">Gói cơ bản</th>
-                    <th className="text-center py-4 px-4 bg-teal-50">Gói tiêu chuẩn</th>
-                    <th className="text-center py-4 px-4">Gói thành viên</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-4 px-4">Tư vấn với bác sĩ</td>
-                    <td className="text-center py-4 px-4">1 bác sĩ/tháng</td>
-                    <td className="text-center py-4 px-4 bg-teal-50">3 bác sĩ không giới hạn</td>
-                    <td className="text-center py-4 px-4">Tất cả bác sĩ không giới hạn</td>
-                  </tr>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-4 px-4">Ưu tiên đặt lịch</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-teal-50">✅</td>
-                    <td className="text-center py-4 px-4">✅ Cao nhất</td>
-                  </tr>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-4 px-4">Video call tư vấn</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-teal-50">✅</td>
-                    <td className="text-center py-4 px-4">✅</td>
-                  </tr>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-4 px-4">Hỗ trợ 24/7</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-teal-50">❌</td>
-                    <td className="text-center py-4 px-4">✅</td>
-                  </tr>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-4 px-4">Giảm phí khám</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-teal-50">5%</td>
-                    <td className="text-center py-4 px-4">10%</td>
-                  </tr>
-                  <tr className="border-b border-gray-200">
-                    <td className="py-4 px-4">Báo cáo sức khỏe định kỳ</td>
-                    <td className="text-center py-4 px-4">❌</td>
-                    <td className="text-center py-4 px-4 bg-teal-50">❌</td>
-                    <td className="text-center py-4 px-4">✅</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        
-        {/* FAQ Section */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-8">
-            <h2 className="text-2xl font-bold mb-6 text-center">Câu hỏi thường gặp</h2>
-            
-            <div className="space-y-6">
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-lg font-semibold mb-2">Làm thế nào để đăng ký gói thành viên?</h3>
-                <p className="text-gray-700">
-                  Bạn có thể đăng ký gói thành viên bằng cách chọn gói phù hợp và nhấn vào nút "Thanh toán", sau đó làm theo hướng dẫn để hoàn tất quá trình thanh toán.
-                </p>
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Plan:</span>
+                <span className="font-medium">{getSelectedPlan()?.name}</span>
               </div>
-              
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-lg font-semibold mb-2">Tôi có thể hủy gói thành viên bất cứ lúc nào không?</h3>
-                <p className="text-gray-700">
-                  Có, bạn có thể hủy gói thành viên của mình bất cứ lúc nào. Việc hủy sẽ có hiệu lực vào cuối kỳ thanh toán hiện tại của bạn.
-                </p>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Billing Cycle:</span>
+                <span className="font-medium">{billingCycle}</span>
               </div>
-              
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-lg font-semibold mb-2">Tôi có thể nâng cấp hoặc hạ cấp gói thành viên không?</h3>
-                <p className="text-gray-700">
-                  Có, bạn có thể thay đổi gói thành viên của mình bất cứ lúc nào. Nếu bạn nâng cấp, sự thay đổi sẽ có hiệu lực ngay lập tức, và bạn sẽ được tính phí cho phần chênh lệch. Nếu bạn hạ cấp, thay đổi sẽ có hiệu lực vào kỳ thanh toán tiếp theo.
-                </p>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Payment Method:</span>
+                <span className="font-medium">{paymentMethod}</span>
               </div>
-              
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-lg font-semibold mb-2">Làm thế nào để sử dụng ưu đãi giảm phí khám?</h3>
-                <p className="text-gray-700">
-                  Ưu đãi giảm phí khám sẽ được áp dụng tự động khi bạn đặt lịch khám với bác sĩ trên hệ thống DOCHUB. Giảm phí sẽ được hiển thị trong tổng thanh toán khi xác nhận đặt lịch.
-                </p>
+              <div className="border-t pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold text-gray-900">Total:</span>
+                  <span className="text-2xl font-bold text-blue-600">
+                    {getSelectedPlan() ? getPrice(getSelectedPlan()!).toLocaleString('vi-VN') : '0'} VND
+                  </span>
+                </div>
+                {billingCycle === 'Yearly' && getSelectedPlan() && getSavings(getSelectedPlan()!) > 0 && (
+                  <p className="text-sm text-green-600 text-right mt-1">
+                    You save {getSavings(getSelectedPlan()!).toLocaleString('vi-VN')} VND
+                  </p>
+                )}
               </div>
             </div>
+
+            <button
+              onClick={handleCreatePayment}
+              disabled={!selectedPlan || paymentMethod !== 'VietQR'}
+              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {paymentMethod === 'VietQR' ? (
+                <>
+                  <QrCode className="w-5 h-5 mr-2" />
+                  Create VietQR Payment
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Proceed to Payment
+                </>
+              )}
+            </button>
+
+            {paymentMethod !== 'VietQR' && (
+              <p className="text-sm text-gray-500 text-center mt-2">
+                This payment method is not available yet. Please use VietQR.
+              </p>
+            )}
+
+            <div className="mt-4 text-xs text-gray-500 text-center">
+              <p>🔒 Secure payment processing</p>
+              <p>💳 No hidden fees or charges</p>
+              <p>📞 24/7 customer support available</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
