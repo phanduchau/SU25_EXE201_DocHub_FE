@@ -17,13 +17,11 @@ import RequireAuth from './components/RequireAuth';
 import Home from './pages/Home';
 import DoctorsList from './pages/DoctorsList';
 import DoctorDetail from './pages/DoctorDetail';
-import Membership from './pages/Membership';
 import Appointments from './pages/Appointments';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BookAppointment from './pages/BookAppointment';
 import BookingConfirmation from './pages/BookingConfirmation';
-import Payment from './pages/Payment';
 import VideoCall from './pages/VideoCall';
 import Chat from './pages/Chat';
 import EmailConfirmation from './pages/EmailConfirmation';
@@ -52,7 +50,6 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/doctors" element={<DoctorsList />} />
                 <Route path="/doctors/:id" element={<DoctorDetail />} />
-                <Route path="/membership" element={<Membership />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -109,14 +106,6 @@ function App() {
                   element={
                     <RequireAuth>
                       <BookingConfirmation />
-                    </RequireAuth>
-                  }
-                />
-                <Route
-                  path="/payment"
-                  element={
-                    <RequireAuth>
-                      <Payment />
                     </RequireAuth>
                   }
                 />

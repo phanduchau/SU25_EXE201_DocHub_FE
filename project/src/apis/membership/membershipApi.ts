@@ -15,20 +15,6 @@ export interface MembershipPlan {
   updatedAt: string;
 }
 
-export interface CreateSubscriptionPaymentDTO {
-  planId: string;
-  billingCycle: 'Monthly' | 'Yearly';
-  paymentMethod: 'vnpay' | 'momo';
-}
-
-export interface PaymentUrlResponse {
-  paymentUrl: string;
-  transactionRef: string;
-  amount: number;
-  planName: string;
-  billingCycle: string;
-}
-
 export interface SubscriptionDTO {
   subscriptionId: string;
   userId: string;
@@ -67,48 +53,6 @@ export const getMembershipPlans = async (): Promise<MembershipPlan[]> => {
   }
 };
 
-/**
- * Tạo URL thanh toán cho gói membership
- */
-export const createPaymentUrl = async (
-  paymentData: CreateSubscriptionPaymentDTO
-): Promise<PaymentUrlResponse> => {
-  try {
-    const response = await axiosClient.post('/subscription/payment/create-payment-url', paymentData);
-    
-    if (!response.data.isSuccess) {
-      throw new Error(response.data.errorMessages?.[0] || 'Không thể tạo liên kết thanh toán');
-    }
-    
-    return response.data.result;
-  } catch (error: any) {
-    console.error('Error creating payment URL:', error);
-    
-    if (error.response?.status === 409) {
-      throw new Error('Bạn đã có gói thành viên đang hoạt động');
-    }
-    
-    throw new Error(error.response?.data?.errorMessages?.[0] || error.message || 'Có lỗi xảy ra khi tạo thanh toán');
-  }
-};
-
-/**
- * Kiểm tra trạng thái thanh toán
- */
-export const getPaymentStatus = async (transactionRef: string): Promise<PaymentStatusResponse> => {
-  try {
-    const response = await axiosClient.get(`/subscription/payment/payment-status/${transactionRef}`);
-    
-    if (!response.data.isSuccess) {
-      throw new Error(response.data.errorMessages?.[0] || 'Không thể kiểm tra trạng thái thanh toán');
-    }
-    
-    return response.data.result;
-  } catch (error: any) {
-    console.error('Error getting payment status:', error);
-    throw new Error(error.response?.data?.errorMessages?.[0] || 'Có lỗi xảy ra khi kiểm tra trạng thái thanh toán');
-  }
-};
 
 /**
  * Lấy thông tin subscription của user hiện tại
@@ -180,19 +124,6 @@ export const toggleAutoRenew = async (subscriptionId: string, autoRenew: boolean
   }
 };
 
-/**
- * Lấy lịch sử thanh toán subscription
- */
-export const getSubscriptionPaymentHistory = async (): Promise<any[]> => {
-  try {
-    const response = await axiosClient.get('/subscription/payment-history');
-    return response.data.result || [];
-  } catch (error: any) {
-    console.error('Error fetching payment history:', error);
-    throw new Error(error.response?.data?.errorMessages?.[0] || 'Không thể tải lịch sử thanh toán');
-  }
-};
-
 // Helper functions
 
 /**
@@ -259,13 +190,10 @@ export const validateBillingCycle = (cycle: string): boolean => {
 
 export default {
   getMembershipPlans,
-  createPaymentUrl,
-  getPaymentStatus,
   getUserSubscription,
   getSubscriptionById,
   cancelSubscription,
   toggleAutoRenew,
-  getSubscriptionPaymentHistory,
   formatPrice,
   calculateYearlyDiscount,
   isSubscriptionActive,
