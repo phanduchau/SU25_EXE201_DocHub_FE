@@ -1,4 +1,4 @@
-// src/App.tsx
+// src/App.tsx - Thêm các routes liên quan đến Payment
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
@@ -35,6 +35,10 @@ import DoctorDashboard from './pages/DoctorDashboard';
 import NotificationPage from './pages/NotificationPage';
 import News from './pages/News';
 import NewsDetail from './pages/NewsDetail';
+import Membership from './pages/Membership';
+import Payment from './pages/Payment'; // THÊM IMPORT PAYMENT
+import PaymentSuccess from './pages/PaymentSuccess'; // THÊM IMPORT PAYMENT SUCCESS
+import PaymentHistory from './pages/PaymentHistory'; // THÊM IMPORT PAYMENT HISTORY
 
 function App() {
   return (
@@ -58,7 +62,7 @@ function App() {
                 <Route path="/landing" element={<Landing />} />
                 <Route path="/news" element={<News />} />
                 <Route path="/news/:id" element={<NewsDetail />} />
-                <Route path="/chat/:id" element={<RequireAuth><Chat /></RequireAuth>} />
+                <Route path="/membership" element={<Membership />} />
 
                 {/* 🔐 Protected routes: chỉ cần đăng nhập */}
                 <Route
@@ -126,6 +130,32 @@ function App() {
                   }
                 />
 
+                {/* 💳 Payment routes - Require Authentication */}
+                <Route
+                  path="/payment"
+                  element={
+                    <RequireAuth>
+                      <Payment />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/payment/success"
+                  element={
+                    <RequireAuth>
+                      <PaymentSuccess />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/payment/history"
+                  element={
+                    <RequireAuth>
+                      <PaymentHistory />
+                    </RequireAuth>
+                  }
+                />
+
                 {/* 🩺 Doctor-only route */}
                 <Route
                   path="/doctor-dashboard"
@@ -136,7 +166,7 @@ function App() {
                   }
                 />
 
-                {/* 🛠 Admin-only route */}
+                {/* 🛠 Admin-only routes */}
                 <Route
                   path="/admin"
                   element={
