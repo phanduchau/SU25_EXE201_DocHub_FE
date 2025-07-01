@@ -23,10 +23,11 @@ import Button from '../components/Button';
 import { useAuthContext } from '../contexts/AuthContext';
 import { getDoctorProfile, updateDoctorProfile, getDoctorProfileByUserId } from '../apis/doctors/doctorApi';
 import { toast } from 'react-toastify';
-import { getAppointmentsByDoctorId, confirmAppointment, cancelAppointment } from '../apis/booking/appointmentApi';
+import { getAppointmentsByDoctorId, confirmAppointment, cancelAppointment, completeAppointment } from '../apis/booking/appointmentApi';
 import PatientDetailsModal from '../components/PatientDetailsModal';
 import { useNavigate } from 'react-router-dom';
 import { uploadImageToCloudinary } from '../utils/uploadImageToCloudinary';
+import CancelAppointmentModal from "../components/CancelAppointmentModal";
 
 interface DoctorStats {
   totalPatients: number;
@@ -62,6 +63,13 @@ interface DoctorProfile {
   imageDoctor: string | null;
 }
 
+interface CancelAppointmentModalProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  cancelBy?: "doctor" | "patient";
+}
+
 
 const DoctorDashboard: React.FC = () => {
   const { user } = useAuthContext();
@@ -84,6 +92,9 @@ const DoctorDashboard: React.FC = () => {
   const itemsPerPage = 5;
   const totalPages = Math.ceil(appointments.length / itemsPerPage);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [appointmentIdToCancel, setAppointmentIdToCancel] = useState<string | null>(null);
+
 
 
   // Mock data for demonstration
@@ -136,53 +147,66 @@ const DoctorDashboard: React.FC = () => {
 
 
   const handleAppointmentStatusUpdate = async (appointmentId: string, newStatus: string) => {
+    if (newStatus === "cancelled") {
+      setAppointmentIdToCancel(appointmentId);
+      setCancelModalOpen(true);
+      return;
+    }
+
     try {
-      if (newStatus === 'confirmed') {
+      if (newStatus === "confirmed") {
         await confirmAppointment(appointmentId);
-      } else if (newStatus === 'cancelled') {
-        await cancelAppointment(appointmentId);
+        setAppointments((prev) =>
+          prev.map((apt) =>
+            apt.id === appointmentId ? { ...apt, status: newStatus as any } : apt
+          )
+        );
+        toast.success("Đã xác nhận cuộc hẹn");
+      } else if (newStatus === "completed") {
+        await completeAppointment(appointmentId);
+        setAppointments((prev) =>
+          prev.map((apt) =>
+            apt.id === appointmentId ? { ...apt, status: newStatus as any } : apt
+          )
+        );
+        toast.success("Đã hoàn thành cuộc hẹn");
       }
 
-      setAppointments(prev =>
-        prev.map(apt =>
-          apt.id === appointmentId ? { ...apt, status: newStatus as any } : apt
-        )
-      );
-      toast.success('Cập nhật trạng thái thành công');
     } catch (error) {
-      console.error('Error updating appointment status:', error);
-      toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
+      console.error("Error updating appointment status:", error);
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái");
     }
   };
 
 
+
   const handleProfileUpdate = async () => {
-  if (!profile) return;
+    if (!profile) return;
 
-  try {
-    let imageUrl = profile.imageDoctor; // giữ lại ảnh cũ nếu không chọn ảnh mới
+    try {
+      let imageUrl = profile.imageDoctor; // giữ lại ảnh cũ nếu không chọn ảnh mới
 
-    if (selectedImage) {
-      imageUrl = await uploadImageToCloudinary(selectedImage); // upload Cloudinary
+      if (selectedImage) {
+        imageUrl = await uploadImageToCloudinary(selectedImage); // upload Cloudinary
+      }
+
+      const payload = {
+        specialization: profile.specialization,
+        yearsOfExperience: Number(profile.yearsOfExperience), // đảm bảo là number
+        bio: profile.bio,
+        hospitalName: profile.hospitalName,
+        imageDoctor: imageUrl,
+        isActive: true
+      };
+
+      await updateDoctorProfile(profile.doctorId.toString(), payload);
+      toast.success("Cập nhật hồ sơ thành công");
+      setIsEditingProfile(false);
+    } catch (err) {
+      toast.error("Cập nhật thất bại");
+      console.error(err);
     }
-
-    const payload = {
-      specialization: profile.specialization,
-      yearsOfExperience: Number(profile.yearsOfExperience), // đảm bảo là number
-      bio: profile.bio,
-      hospitalName: profile.hospitalName,
-      imageDoctor: imageUrl,
-      isActive: true
-    };
-
-    await updateDoctorProfile(profile.doctorId.toString(), payload);
-    toast.success("Cập nhật hồ sơ thành công");
-    setIsEditingProfile(false);
-  } catch (err) {
-    toast.error("Cập nhật thất bại");
-    console.error(err);
-  }
-};
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -388,30 +412,50 @@ const DoctorDashboard: React.FC = () => {
                       <div className="flex space-x-2">
                         {appointment.status === 'pending' && (
                           <>
-                            <button
+                            <Button
+                              size="sm"
+                              variant="primary"
                               onClick={() => handleAppointmentStatusUpdate(appointment.id, 'confirmed')}
-                              className="text-green-600 hover:text-green-900"
                             >
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
-                            <button
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Xác nhận
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-600 hover:bg-red-50"
                               onClick={() => handleAppointmentStatusUpdate(appointment.id, 'cancelled')}
-                              className="text-red-600 hover:text-red-900"
                             >
-                              <XCircle className="h-4 w-4" />
-                            </button>
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Hủy
+                            </Button>
                           </>
                         )}
+
                         {appointment.status === 'confirmed' && (
-                          <button
-                            onClick={() => handleAppointmentStatusUpdate(appointment.id, 'completed')}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => handleAppointmentStatusUpdate(appointment.id, 'completed')}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Hoàn thành
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-600 hover:bg-red-50"
+                              onClick={() => handleAppointmentStatusUpdate(appointment.id, 'cancelled')}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Hủy
+                            </Button>
+                          </>
                         )}
                       </div>
                     </td>
+
                   </tr>
                 ))}
             </tbody>
@@ -555,24 +599,24 @@ const DoctorDashboard: React.FC = () => {
                 />
               </div>
               {isEditingProfile && (
-  <div className="md:col-span-2">
-    <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh đại diện</label>
-    <input
-      type="file"
-      accept="image/*"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          setSelectedImage(file);
-          setProfile((prev) =>
-            prev ? { ...prev, imageDoctor: URL.createObjectURL(file) } : null
-          );
-        }
-      }}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-    />
-  </div>
-)}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh đại diện</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedImage(file);
+                        setProfile((prev) =>
+                          prev ? { ...prev, imageDoctor: URL.createObjectURL(file) } : null
+                        );
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              )}
 
             </div>
           </div>
@@ -667,6 +711,34 @@ const DoctorDashboard: React.FC = () => {
           }}
         />
       )}
+
+      {/* Cancel Modal */}
+      <CancelAppointmentModal
+        open={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        onConfirm={async (reason) => {
+          if (!appointmentIdToCancel) return;
+
+          try {
+            await cancelAppointment(appointmentIdToCancel, reason);
+            setAppointments((prev) =>
+              prev.map((apt) =>
+                apt.id === appointmentIdToCancel
+                  ? { ...apt, status: "cancelled" }
+                  : apt
+              )
+            );
+            toast.success("Hủy lịch hẹn thành công");
+          } catch (error) {
+            console.error(error);
+            toast.error("Có lỗi xảy ra khi hủy lịch hẹn");
+          } finally {
+            setCancelModalOpen(false);
+            setAppointmentIdToCancel(null);
+          }
+        }}
+        cancelBy="doctor"
+      />
     </div>
   );
 

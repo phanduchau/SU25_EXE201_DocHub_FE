@@ -30,6 +30,18 @@ export const confirmAppointment = async (appointmentId: string) => {
   await axiosClient.post(`/Appointment/${appointmentId}/confirm`);
 };
 
-export const cancelAppointment = async (appointmentId: string) => {
-  await axiosClient.post(`/Appointment/${appointmentId}/cancel`);
+export const cancelAppointment = async (appointmentId: string, reason: string) => {
+  return await axiosClient.post(
+    `/Appointment/${appointmentId}/cancel`,
+    { cancellationReason: reason },
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+};
+
+export const completeAppointment = async (appointmentId: string) => {
+  return await axiosClient.post(`/Appointment/${appointmentId}/complete`);
 };
