@@ -63,6 +63,7 @@ function App() {
                 <Route path="/news" element={<News />} />
                 <Route path="/news/:id" element={<NewsDetail />} />
                 <Route path="/membership" element={<Membership />} />
+                <Route path="/chat/:id" element={<RequireAuth><Chat /></RequireAuth>} />
 
                 {/* 🔐 Protected routes: chỉ cần đăng nhập */}
                 <Route
