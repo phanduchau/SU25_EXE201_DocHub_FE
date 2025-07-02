@@ -5,13 +5,13 @@ import CustomCalendar from '../components/Calendar';
 import { getAppointmentsByUserId, cancelAppointment } from '../apis/booking/appointmentApi';
 import { useAuthContext } from '../contexts/AuthContext';
 import AppointmentActionsModal from '../components/AppointmentActionsModal';
-import { toast } from 'react-toastify';
 import CancelAppointmentModal from '../components/CancelAppointmentModal';
+import { toast } from 'react-toastify';
 
 interface Appointment {
   appointmentId: string;
   doctorName: string;
-  imageDoctor: string | null;
+  doctorImage: string | null;
   appointmentDate: string;
   appointmentTime: string;
   specialization: string;
@@ -45,7 +45,7 @@ const Appointments: React.FC = () => {
             appointmentId: item.appointmentId,
             doctorName: item.doctorName || 'Không rõ',
             specialization: item.specialization || '',
-            imageDoctor: item.doctorImageUrl || '',
+            doctorImage: item.doctorImageUrl || '',
             appointmentDate: item.appointmentDate,
             appointmentTime: format(new Date(item.appointmentDate), 'HH:mm'),
             status: item.status,
@@ -145,7 +145,7 @@ const Appointments: React.FC = () => {
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center mb-4 md:mb-0">
                           <img
-                            src={apt.imageDoctor || 'https://via.placeholder.com/150'}
+                            src={apt.doctorImage || 'https://via.placeholder.com/150'}
                             alt={apt.doctorName}
                             className="w-12 h-12 rounded-full object-cover mr-4"
                           />
@@ -246,7 +246,7 @@ const Appointments: React.FC = () => {
                       <div key={apt.appointmentId} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
                         <div className="flex items-center">
                           <img
-                            src={apt.imageDoctor || 'https://via.placeholder.com/150'}
+                            src={apt.doctorImage || 'https://via.placeholder.com/150'}
                             alt={apt.doctorName}
                             className="w-10 h-10 rounded-full object-cover mr-3"
                           />
@@ -265,6 +265,7 @@ const Appointments: React.FC = () => {
           </div>
         </div>
       </div>
+
       {selectedAppointment && (
         <AppointmentActionsModal
           appointmentId={selectedAppointment.appointmentId}
@@ -274,33 +275,33 @@ const Appointments: React.FC = () => {
       )}
 
       <CancelAppointmentModal
-  open={cancelModalOpen}
-  onClose={() => {
-    setCancelModalOpen(false);
-    setAppointmentIdToCancel(null);
-  }}
-  onConfirm={async (reason) => {
-    if (!appointmentIdToCancel) return;
-    try {
-      await cancelAppointment(appointmentIdToCancel, reason);
-      toast.success('Đã hủy cuộc hẹn');
-      setAppointments((prev) =>
-        prev.map((a) =>
-          a.appointmentId === appointmentIdToCancel
-            ? { ...a, status: 'cancelled' }
-            : a
-        )
-      );
-    } catch (error) {
-      toast.error('Lỗi khi hủy cuộc hẹn');
-      console.error(error);
-    } finally {
-      setCancelModalOpen(false);
-      setAppointmentIdToCancel(null);
-    }
-  }}
-  cancelBy="patient"
-/>
+        open={cancelModalOpen}
+        onClose={() => {
+          setCancelModalOpen(false);
+          setAppointmentIdToCancel(null);
+        }}
+        onConfirm={async (reason) => {
+          if (!appointmentIdToCancel) return;
+          try {
+            await cancelAppointment(appointmentIdToCancel, reason);
+            toast.success('Đã hủy cuộc hẹn');
+            setAppointments((prev) =>
+              prev.map((a) =>
+                a.appointmentId === appointmentIdToCancel
+                  ? { ...a, status: 'cancelled' }
+                  : a
+              )
+            );
+          } catch (error) {
+            toast.error('Lỗi khi hủy cuộc hẹn');
+            console.error(error);
+          } finally {
+            setCancelModalOpen(false);
+            setAppointmentIdToCancel(null);
+          }
+        }}
+        cancelBy="patient"
+      />
     </div>
   );
 };

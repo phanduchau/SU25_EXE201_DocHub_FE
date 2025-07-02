@@ -23,7 +23,7 @@ export const getAppointmentsByUserId = async (userId: string) => {
 
 export const getAppointmentsByDoctorId = async (doctorId: string): Promise<Appointment[]> => {
   const res = await axiosClient.get(`/Appointment/doctor/${doctorId}`);
-  return res.data.result; // Lấy phần `result` chứa danh sách lịch hẹn
+  return res.data.result;
 };
 
 export const confirmAppointment = async (appointmentId: string) => {
