@@ -62,23 +62,17 @@ import {
   deleteFeedback
 } from '../apis/admin/adminFeedbackApi';
 
-import { FeedbackDTO, FeedbackStatisticsDTO } from '../types/index';
+import { FeedbackDTO, FeedbackStatisticsDTO, DashboardStatisticsDto, RevenueDataDto } from '../types/index';
 import FeedbackDetailModal from '../components/FeedbackDetailModal';
+import { getDashboardStatistics } from "../apis/admin/dashboardApi";
 
-
-interface RevenueData {
-  month: string;
-  revenue: number;
-  appointments: number;
-  percentage: number;
-}
 const Admin: React.FC = () => {
  const [activeTab, setActiveTab] = useState<
   'overview' | 'users' | 'doctors' | 'revenue' | 'vietqr' | 'feedback'
 >('overview');
  const [searchTerm, setSearchTerm] = useState('');
   const [chartFilter, setChartFilter] = useState<'year' | 'month' | 'week'>('month');
-  const [sortBy, setSortBy] = useState<'revenue' | 'appointments' | 'growth'>('revenue');
+  const [sortBy, setSortBy] = useState<'revenue' | 'appointments'>('revenue');
   const [userList, setUserList] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -88,23 +82,23 @@ const Admin: React.FC = () => {
   const [currentPageUsers, setCurrentPageUsers] = useState(1);
   const [currentPageDoctors, setCurrentPageDoctors] = useState(1);
   const itemsPerPage = 3;
-const [vietQRRequests, setVietQRRequests] = useState<AdminPaymentRequest[]>([]);
-const [loadingVietQR, setLoadingVietQR] = useState(false);
-const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<AdminPaymentRequest | null>(null);
-const [showConfirmModal, setShowConfirmModal] = useState(false);
-const [confirmNotes, setConfirmNotes] = useState('');
-const [confirming, setConfirming] = useState(false);
-const [vietQRSearchParams, setVietQRSearchParams] = useState<PaymentRequestSearchParams>({
-  page: 1,
-  pageSize: 10,
-});
-const [feedbackList, setFeedbackList] = useState<FeedbackDTO[]>([]);
-const [loadingFeedback, setLoadingFeedback] = useState(false);
-const [selectedFeedback, setSelectedFeedback] = useState<FeedbackDTO | null>(null);
-const [currentPageFeedback, setCurrentPageFeedback] = useState(1);
-const itemsPerPageFeedback = 10;
-const [showFeedbackDetail, setShowFeedbackDetail] = useState(false);
-const [feedbackStats, setFeedbackStats] = useState<FeedbackStatisticsDTO | null>(null);
+  const [vietQRRequests, setVietQRRequests] = useState<AdminPaymentRequest[]>([]);
+  const [loadingVietQR, setLoadingVietQR] = useState(false);
+  const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<AdminPaymentRequest | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmNotes, setConfirmNotes] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [vietQRSearchParams, setVietQRSearchParams] = useState<PaymentRequestSearchParams>({
+    page: 1,
+    pageSize: 10,
+  });
+  const [feedbackList, setFeedbackList] = useState<FeedbackDTO[]>([]);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackDTO | null>(null);
+  const [currentPageFeedback, setCurrentPageFeedback] = useState(1);
+  const itemsPerPageFeedback = 10;
+  const [showFeedbackDetail, setShowFeedbackDetail] = useState(false);
+  const [feedbackStats, setFeedbackStats] = useState<FeedbackStatisticsDTO | null>(null);
 
 const fetchFeedbacks = async () => {
   setLoadingFeedback(true);
@@ -309,31 +303,34 @@ const formatDate = (dateString: string) => {
   const totalPagesDoctors = Math.ceil(filteredDoctors.length / itemsPerPage);
   const displayedDoctors = filteredDoctors.slice((currentPageDoctors - 1) * itemsPerPage, currentPageDoctors * itemsPerPage);
 
+  const [dashboardStats, setDashboardStats] = useState<DashboardStatisticsDto | null>(null);
+const [loadingDashboard, setLoadingDashboard] = useState(false);
 
-  const revenueData: RevenueData[] = [
-    { month: 'Jan', revenue: 12000000, appointments: 240, percentage: 20 },
-    { month: 'Feb', revenue: 15000000, appointments: 300, percentage: 30 },
-    { month: 'Mar', revenue: 18000000, appointments: 360, percentage: 40 },
-    { month: 'Apr', revenue: 22000000, appointments: 440, percentage: 50 },
-    { month: 'May', revenue: 25000000, appointments: 500, percentage: 60 },
-    { month: 'Jun', revenue: 28000000, appointments: 560, percentage: 70 },
-    { month: 'Jul', revenue: 32000000, appointments: 640, percentage: 80 },
-    { month: 'Aug', revenue: 29000000, appointments: 580, percentage: 65 },
-    { month: 'Sep', revenue: 31000000, appointments: 620, percentage: 75 },
-    { month: 'Oct', revenue: 35000000, appointments: 700, percentage: 85 },
-    { month: 'Nov', revenue: 33000000, appointments: 660, percentage: 78 },
-    { month: 'Dec', revenue: 38000000, appointments: 760, percentage: 90 }
-  ];
-  const stats = {
-    totalUsers: 40689,
-    totalOrders: 10293,
-    totalSales: 89000,
-    totalPending: 2040,
-    userGrowth: 8.5,
-    orderGrowth: 1.3,
-    salesGrowth: -4.3,
-    pendingGrowth: 1.8
-  };
+const fetchDashboardStats = async () => {
+  try {
+    setLoadingDashboard(true);
+    const res = await getDashboardStatistics(chartFilter);
+    if (res?.isSuccess) {
+      setDashboardStats(res.result);
+    } else {
+      toast.error("Không thể tải dữ liệu Dashboard");
+    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Không thể tải dữ liệu Dashboard");
+  } finally {
+    setLoadingDashboard(false);
+  }
+};
+
+useEffect(() => {
+  if (activeTab === 'overview') {
+    fetchDashboardStats();
+  }
+}, [activeTab, chartFilter]);
+
+
+
   const sidebarItems = [
     { id: 'overview', label: 'Dashboard', icon: Home, active: true },
     { id: 'users', label: 'Người dùng', icon: Users },
@@ -343,15 +340,24 @@ const formatDate = (dateString: string) => {
   { id: 'feedback', label: 'Feedback', icon: Star },
   ];
   
-  const renderOverview = () => (
+  const renderOverview = () => {
+  const sortedRevenueData = [...(dashboardStats?.revenueData || [])].sort((a, b) => {
+    if (sortBy === 'revenue') {
+      return b.revenue - a.revenue;
+    }
+    if (sortBy === 'appointments') {
+      return b.appointments - a.appointments;
+    }
+    return 0;
+  });
 
+  return (
     <div className="space-y-6">
-
-      {/* Nút tạo tài khoản bác sĩ */}
-      <div className="flex justify-end">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <h2 className="text-xl font-semibold">Quản lý Dashboard</h2>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="mt-4 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
         >
           + Tạo tài khoản bác sĩ
         </button>
@@ -359,71 +365,33 @@ const formatDate = (dateString: string) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Tổng người dùng</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalUsers.toLocaleString()}</p>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600 font-medium">{stats.userGrowth}%</span>
-                <span className="text-sm text-gray-500 ml-1">Tăng so với hôm qua</span>
-              </div>
-            </div>
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <Users className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Lịch hẹn đã đặt</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalOrders.toLocaleString()}</p>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600 font-medium">{stats.orderGrowth}%</span>
-                <span className="text-sm text-gray-500 ml-1">Tăng từ tuần trước</span>
-              </div>
-            </div>
-            <div className="bg-orange-100 p-3 rounded-lg">
-              <Package className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Tổng doanh thu</p>
-              <p className="text-2xl font-bold text-gray-900">${stats.totalSales.toLocaleString()}</p>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-red-500 mr-1 rotate-180" />
-                <span className="text-sm text-red-600 font-medium">{Math.abs(stats.salesGrowth)}%</span>
-                <span className="text-sm text-gray-500 ml-1">Giảm so với hôm qua</span>
-              </div>
-            </div>
-            <div className="bg-green-100 p-3 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">  Lịch hẹn đang chờ</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalPending.toLocaleString()}</p>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600 font-medium">{stats.pendingGrowth}%</span>
-                <span className="text-sm text-gray-500 ml-1">Tăng so với hôm qua</span>
-              </div>
-            </div>
-            <div className="bg-red-100 p-3 rounded-lg">
-              <Clock className="h-6 w-6 text-red-600" />
-            </div>
-          </div>
-        </div>
-      </div>
+  <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+    <p className="text-gray-500 text-sm mb-1">Tổng người dùng</p>
+    <p className="text-2xl font-bold text-gray-800">
+      {dashboardStats?.totalUsers ?? 0}
+    </p>
+  </div>
+  <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+    <p className="text-gray-500 text-sm mb-1">Tổng đơn hàng</p>
+    <p className="text-2xl font-bold text-gray-800">
+      {dashboardStats?.totalOrders ?? 0}
+    </p>
+  </div>
+  <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+    <p className="text-gray-500 text-sm mb-1">Tổng doanh thu</p>
+    <p className="text-2xl font-bold text-gray-800">
+      {dashboardStats?.totalSales ?? 0}
+    </p>
+  </div>
+  <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+    <p className="text-gray-500 text-sm mb-1">Tổng chờ xử lý</p>
+    <p className="text-2xl font-bold text-gray-800">
+      {dashboardStats?.totalPending ?? 0}
+    </p>
+  </div>
+</div>
+
+
       {/* Sales Details Chart */}
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <div className="flex items-center justify-between mb-6">
@@ -440,124 +408,61 @@ const formatDate = (dateString: string) => {
             </select>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'revenue' | 'appointments' | 'growth')}
+              onChange={(e) => setSortBy(e.target.value as 'revenue' | 'appointments')}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="revenue">Sort by Revenue</option>
               <option value="appointments">Sort by Appointments</option>
-              <option value="growth">Sort by Growth</option>
             </select>
-            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors">
-              Options
-            </button>
           </div>
         </div>
 
         <div className="relative h-80">
-          {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500 pr-4">
-            <span>100%</span>
-            <span>80%</span>
-            <span>60%</span>
-            <span>40%</span>
-            <span>20%</span>
-            <span>0%</span>
-          </div>
+          <svg className="absolute inset-0 w-full h-full">
+            {/* ... Gradient definitions ... */}
 
-          {/* Chart area */}
-          <div className="ml-12 h-full relative">
-            {/* Grid lines */}
-            <div className="absolute inset-0">
-              {[0, 20, 40, 60, 80, 100].map((line) => (
-                <div
-                  key={line}
-                  className="absolute w-full border-t border-gray-100"
-                  style={{ top: `${100 - line}%` }}
+            {/* Main line */}
+            <polyline
+              points={sortedRevenueData.map((item, index) =>
+                `${(index * (100 / (sortedRevenueData.length - 1)))}%,${320 - (item.percentage * 3.2)}`
+              ).join(' ')}
+              fill="none"
+              stroke="#3B82F6"
+              strokeWidth="3"
+              className="drop-shadow-sm"
+            />
+
+            {/* Data points */}
+            {sortedRevenueData.map((item, index) => (
+              <g key={index}>
+                <circle
+                  cx={`${(index * (100 / (sortedRevenueData.length - 1)))}%`}
+                  cy={320 - (item.percentage * 3.2)}
+                  r="4"
+                  fill="#3B82F6"
+                  className="drop-shadow-sm"
                 />
-              ))}
-            </div>
+              </g>
+            ))}
+          </svg>
 
-            {/* Chart line */}
-            <svg className="absolute inset-0 w-full h-full">
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.05" />
-                </linearGradient>
-              </defs>
-
-              {/* Area under curve */}
-              <path
-                d={`M 0 ${320 - (revenueData[0].percentage * 3.2)} ${revenueData.map((item, index) =>
-                  `L ${(index * (100 / (revenueData.length - 1)))}% ${320 - (item.percentage * 3.2)}`
-                ).join(' ')} L 100% 320 L 0 320 Z`}
-                fill="url(#gradient)"
-              />
-
-              {/* Main line */}
-              <polyline
-                points={revenueData.map((item, index) =>
-                  `${(index * (100 / (revenueData.length - 1)))}%,${320 - (item.percentage * 3.2)}`
-                ).join(' ')}
-                fill="none"
-                stroke="#3B82F6"
-                strokeWidth="3"
-                className="drop-shadow-sm"
-              />
-
-              {/* Data points */}
-              {revenueData.map((item, index) => (
-                <g key={index}>
-                  <circle
-                    cx={`${(index * (100 / (revenueData.length - 1)))}%`}
-                    cy={320 - (item.percentage * 3.2)}
-                    r="4"
-                    fill="#3B82F6"
-                    className="drop-shadow-sm"
-                  />
-                  {/* Tooltip on hover */}
-                  {index === 6 && (
-                    <g>
-                      <rect
-                        x={`${(index * (100 / (revenueData.length - 1))) - 5}%`}
-                        y={320 - (item.percentage * 3.2) - 35}
-                        width="60"
-                        height="25"
-                        fill="#1E40AF"
-                        rx="4"
-                        className="drop-shadow-lg"
-                      />
-                      <text
-                        x={`${(index * (100 / (revenueData.length - 1)))}%`}
-                        y={320 - (item.percentage * 3.2) - 18}
-                        textAnchor="middle"
-                        fill="white"
-                        fontSize="12"
-                        fontWeight="600"
-                      >
-                        ${item.revenue / 1000}K
-                      </text>
-                    </g>
-                  )}
-                </g>
-              ))}
-            </svg>
-
-            {/* X-axis labels */}
-            <div className="absolute bottom-0 w-full flex justify-between text-xs text-gray-500 pt-4">
-              {revenueData.map((item, index) => (
-                <span key={index} className="text-center">
-                  {item.month}
-                </span>
-              ))}
-            </div>
+          {/* X-axis labels */}
+          <div className="absolute bottom-0 w-full flex justify-between text-xs text-gray-500 pt-4">
+            {sortedRevenueData.map((item, index) => (
+              <span key={index} className="text-center">
+                {item.label}
+              </span>
+            ))}
           </div>
         </div>
       </div>
-      {/* Modal hiển thị khi bấm nút */}
+
+      {/* Modal */}
       {showCreateModal && <CreateDoctorModal onClose={() => setShowCreateModal(false)} />}
     </div>
   );
+};
+
   const renderUsers = () => (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -778,7 +683,11 @@ const formatDate = (dateString: string) => {
     </div>
   );
 
-  const renderRevenue = () => (
+  const renderRevenue = () => {
+  const revenueData: RevenueDataDto[] = dashboardStats?.revenueData || [];
+  const maxRevenue = Math.max(...revenueData.map(d => d.revenue), 0);
+
+  return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Quản lý doanh thu</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -798,22 +707,27 @@ const formatDate = (dateString: string) => {
           </div>
 
           <div className="h-80 flex items-end justify-between space-x-4">
-            {revenueData.map((item, index) => (
+            {revenueData.map((item: RevenueDataDto, index: number) => (
               <div key={index} className="flex flex-col items-center flex-1">
                 <div className="relative w-full">
                   <div
                     className="bg-blue-500 w-full rounded-t transition-all duration-500 hover:bg-blue-600"
-                    style={{ height: `${(item.revenue / Math.max(...revenueData.map(d => d.revenue))) * 250}px` }}
+                    style={{
+                      height: `${(item.revenue / (maxRevenue || 1)) * 250}px`,
+                    }}
                   ></div>
                   <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs font-medium text-gray-700">
-                    {(item.revenue / 1000000).toFixed(0)}M
+                    {(item.revenue / 1_000_000).toFixed(0)}M
                   </div>
                 </div>
-                <span className="text-sm text-gray-600 mt-2 font-medium">{item.month}</span>
+                <span className="text-sm text-gray-600 mt-2 font-medium">
+                  {item.label}
+                </span>
               </div>
             ))}
           </div>
         </div>
+
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold mb-4">Thống kê tổng quan</h3>
@@ -836,32 +750,11 @@ const formatDate = (dateString: string) => {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold mb-4">Top bác sĩ</h3>
-            <div className="space-y-3">
-              {doctors.filter(d => d.status === 'active').slice(0, 3).map((doctor, index) => (
-                <div key={doctor.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white mr-3 ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-orange-500'
-                      }`}>
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{doctor.name}</p>
-                      <p className="text-xs text-gray-500">{doctor.specialty}</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-green-600">
-                    {(doctor.revenue / 1000000).toFixed(1)}M
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
+};
 
   const renderVietQR = () => (
   <div className="space-y-6">

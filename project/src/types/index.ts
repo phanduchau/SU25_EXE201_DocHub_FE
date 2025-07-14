@@ -147,3 +147,25 @@ export interface UpdateFeedbackStatusDTO {
   status: string;
   adminNotes?: string;
 }
+
+export interface RevenueDataDto {
+  label: string;
+  revenue: number;
+  appointments: number;
+  percentage: number;
+}
+
+export interface DashboardStatisticsDto {
+  totalUsers: number;
+  totalOrders: number;
+  totalSales: number;
+  totalPending: number;
+  revenueData: RevenueDataDto[];
+}
+
+export interface ApiResponse<T> {
+  statusCode: string;
+  isSuccess: boolean;
+  errorMessages: string[];
+  result: T;
+}

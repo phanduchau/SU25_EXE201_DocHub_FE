@@ -40,10 +40,6 @@ const FeedbackDetailModal: React.FC<FeedbackDetailModalProps> = ({
             {feedback.doctorId}
           </div>
           <div>
-            <span className="font-medium text-gray-500">Tên Bác sĩ:</span>{" "}
-            {feedback.doctorName || "Không có"}
-          </div>
-          <div>
             <span className="font-medium text-gray-500">Nội dung:</span>{" "}
             {feedback.content}
           </div>
