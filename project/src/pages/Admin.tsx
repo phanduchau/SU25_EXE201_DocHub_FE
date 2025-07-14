@@ -71,6 +71,7 @@ const Admin: React.FC = () => {
   'overview' | 'users' | 'doctors' | 'revenue' | 'vietqr' | 'feedback'
 >('overview');
  const [searchTerm, setSearchTerm] = useState('');
+ const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
   const [chartFilter, setChartFilter] = useState<'year' | 'month' | 'week'>('month');
   const [sortBy, setSortBy] = useState<'revenue' | 'appointments'>('revenue');
   const [userList, setUserList] = useState<AdminUser[]>([]);
@@ -324,10 +325,11 @@ const fetchDashboardStats = async () => {
 };
 
 useEffect(() => {
-  if (activeTab === 'overview') {
+  if (activeTab === 'overview' || activeTab === 'revenue') {
     fetchDashboardStats();
   }
 }, [activeTab, chartFilter]);
+
 
 
 
@@ -689,65 +691,126 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Quản lý doanh thu</h2>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+        <h2 className="text-xl font-semibold">Quản lý doanh thu</h2>
+        <div className="mt-4 md:mt-0 flex items-center gap-3">
+          <select
+            value={chartFilter}
+            onChange={(e) => setChartFilter(e.target.value as 'year' | 'month' | 'week')}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="year">This Year</option>
+          </select>
+          <Button
+            variant={chartType === 'bar' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setChartType('bar')}
+          >
+            <BarChart3 className="h-4 w-4 mr-1" />
+            Cột
+          </Button>
+          <Button
+            variant={chartType === 'line' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setChartType('line')}
+          >
+            <TrendingUp className="h-4 w-4 mr-1" />
+            Đường
+          </Button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Biểu đồ doanh thu</h3>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Cột
-              </Button>
-              <Button variant="outline" size="sm">
-                <TrendingUp className="h-4 w-4 mr-1" />
-                Đường
-              </Button>
-            </div>
-          </div>
-
-          <div className="h-80 flex items-end justify-between space-x-4">
-            {revenueData.map((item: RevenueDataDto, index: number) => (
-              <div key={index} className="flex flex-col items-center flex-1">
-                <div className="relative w-full">
-                  <div
-                    className="bg-blue-500 w-full rounded-t transition-all duration-500 hover:bg-blue-600"
-                    style={{
-                      height: `${(item.revenue / (maxRevenue || 1)) * 250}px`,
-                    }}
-                  ></div>
-                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs font-medium text-gray-700">
-                    {(item.revenue / 1_000_000).toFixed(0)}M
+          {chartType === 'bar' ? (
+            <div className="h-80 flex items-end justify-between space-x-4">
+              {revenueData.map((item: RevenueDataDto, index: number) => (
+                <div key={index} className="flex flex-col items-center flex-1">
+                  <div className="relative w-full">
+                    <div
+                      className="bg-blue-500 w-full rounded-t transition-all duration-500 hover:bg-blue-600"
+                      style={{
+                        height: `${(item.revenue / (maxRevenue || 1)) * 250}px`,
+                      }}
+                    ></div>
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs font-medium text-gray-700">
+                      {(item.revenue / 1_000_000).toFixed(0)}M
+                    </div>
                   </div>
+                  <span className="text-sm text-gray-600 mt-2 font-medium">
+                    {item.label}
+                  </span>
                 </div>
-                <span className="text-sm text-gray-600 mt-2 font-medium">
-                  {item.label}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <svg className="w-full h-80">
+              <polyline
+                fill="none"
+                stroke="#3B82F6"
+                strokeWidth="3"
+                points={revenueData
+                  .map((item, index) => {
+                    const x = (index / (revenueData.length - 1)) * 100;
+                    const y = 250 - (item.revenue / (maxRevenue || 1)) * 250;
+                    return `${x}%,${y}`;
+                  })
+                  .join(" ")}
+              />
+              {revenueData.map((item, index) => {
+                const x = (index / (revenueData.length - 1)) * 100;
+                const y = 250 - (item.revenue / (maxRevenue || 1)) * 250;
+                return (
+                  <circle
+                    key={index}
+                    cx={`${x}%`}
+                    cy={y}
+                    r="4"
+                    fill="#3B82F6"
+                  />
+                );
+              })}
+            </svg>
+          )}
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold mb-4">Thống kê tổng quan</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Doanh thu tháng này</span>
-                <span className="font-semibold text-green-600">28M VNĐ</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Tăng trưởng</span>
-                <span className="font-semibold text-green-600">+12.5%</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Lịch hẹn tháng này</span>
-                <span className="font-semibold">560</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Trung bình/lịch hẹn</span>
-                <span className="font-semibold">50K VNĐ</span>
-              </div>
+        <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+          <p className="text-gray-800 font-bold text-lg mb-4">
+            Thống kê tổng quan
+          </p>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 text-sm font-medium">Tổng doanh thu</span>
+              <span className="text-[#10B981] font-bold text-base">
+                {formatAmount(dashboardStats?.totalSales || 0)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 text-sm font-medium">Tổng lịch hẹn</span>
+              <span className="text-gray-800 font-bold text-base">
+                {dashboardStats?.totalOrders ?? 0}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 text-sm font-medium">Doanh thu TB/lịch hẹn</span>
+              <span className="text-gray-800 font-bold text-base">
+                {dashboardStats?.totalOrders
+                  ? formatAmount(Math.round(dashboardStats.totalSales / dashboardStats.totalOrders))
+                  : '0 đ'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700 text-sm font-medium">Kỳ thống kê</span>
+              <span className="text-gray-800 font-semibold text-base">
+                {chartFilter === 'week'
+                  ? 'Tuần này'
+                  : chartFilter === 'month'
+                    ? 'Tháng này'
+                    : 'Năm nay'}
+              </span>
             </div>
           </div>
         </div>
@@ -755,6 +818,7 @@ useEffect(() => {
     </div>
   );
 };
+
 
   const renderVietQR = () => (
   <div className="space-y-6">
