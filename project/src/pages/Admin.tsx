@@ -55,6 +55,16 @@ import UserDetailModal from '../components/UserDetailModal';
 import { AdminUser } from '../types/index';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { doctors } from '../data/doctors';
+import {
+  getAllFeedbacks,
+  getFeedbackStatistics,
+  updateFeedbackStatus,
+  deleteFeedback
+} from '../apis/admin/adminFeedbackApi';
+
+import { FeedbackDTO, FeedbackStatisticsDTO } from '../types/index';
+import FeedbackDetailModal from '../components/FeedbackDetailModal';
+
 
 interface RevenueData {
   month: string;
@@ -64,7 +74,7 @@ interface RevenueData {
 }
 const Admin: React.FC = () => {
  const [activeTab, setActiveTab] = useState<
-  'overview' | 'users' | 'doctors' | 'revenue' | 'vietqr'
+  'overview' | 'users' | 'doctors' | 'revenue' | 'vietqr' | 'feedback'
 >('overview');
  const [searchTerm, setSearchTerm] = useState('');
   const [chartFilter, setChartFilter] = useState<'year' | 'month' | 'week'>('month');
@@ -88,6 +98,62 @@ const [vietQRSearchParams, setVietQRSearchParams] = useState<PaymentRequestSearc
   page: 1,
   pageSize: 10,
 });
+const [feedbackList, setFeedbackList] = useState<FeedbackDTO[]>([]);
+const [loadingFeedback, setLoadingFeedback] = useState(false);
+const [selectedFeedback, setSelectedFeedback] = useState<FeedbackDTO | null>(null);
+const [currentPageFeedback, setCurrentPageFeedback] = useState(1);
+const itemsPerPageFeedback = 10;
+const [showFeedbackDetail, setShowFeedbackDetail] = useState(false);
+const [feedbackStats, setFeedbackStats] = useState<FeedbackStatisticsDTO | null>(null);
+
+const fetchFeedbacks = async () => {
+  setLoadingFeedback(true);
+  try {
+    const data = await getAllFeedbacks();
+    setFeedbackList(data);
+    const stats = await getFeedbackStatistics();
+    setFeedbackStats(stats);
+  } catch (error) {
+    console.error(error);
+    toast.error('Không thể tải dữ liệu feedback');
+  } finally {
+    setLoadingFeedback(false);
+  }
+};
+
+useEffect(() => {
+  if (activeTab === 'feedback') {
+    fetchFeedbacks();
+  }
+}, [activeTab]);
+
+const handleUpdateStatus = async (id: number, newStatus: string) => {
+  try {
+    await updateFeedbackStatus(id, {
+      status: newStatus,
+      adminNotes: 'Updated by admin',
+    });
+    toast.success('Cập nhật trạng thái thành công!');
+    setShowFeedbackDetail(false);
+    fetchFeedbacks();
+  } catch (e: any) {
+    console.error(e);
+    toast.error('Cập nhật trạng thái thất bại!');
+  }
+};
+
+const handleDeleteFeedback = async (id: number) => {
+  if (!window.confirm('Bạn có chắc muốn xóa feedback này?')) return;
+  try {
+    await deleteFeedback(id);
+    toast.success('Xóa feedback thành công!');
+    fetchFeedbacks();
+  } catch (e: any) {
+    console.error(e);
+    toast.error('Xóa feedback thất bại!');
+  }
+};
+
 
 
   const fetchUsers = async () => {
@@ -233,6 +299,8 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('vi-VN');
 };
 
+
+
   const filteredUsers = userList.filter(user => user.roles.includes('Customer'));
   const totalPagesUsers = Math.ceil(filteredUsers.length / itemsPerPage);
   const displayedUsers = filteredUsers.slice((currentPageUsers - 1) * itemsPerPage, currentPageUsers * itemsPerPage);
@@ -272,6 +340,7 @@ const formatDate = (dateString: string) => {
     { id: 'doctors', label: 'Bác sĩ', icon: Stethoscope },
     { id: 'revenue', label: 'Doanh thu', icon: BarChart3 },
   { id: 'vietqr', label: 'Thanh toán VietQR', icon: CreditCard },
+  { id: 'feedback', label: 'Feedback', icon: Star },
   ];
   
   const renderOverview = () => (
@@ -1233,6 +1302,142 @@ const formatDate = (dateString: string) => {
       )}
   </div> 
   );
+
+const totalPagesFeedback = Math.ceil(feedbackList.length / itemsPerPageFeedback);
+const displayedFeedbacks = feedbackList.slice(
+  (currentPageFeedback - 1) * itemsPerPageFeedback,
+  currentPageFeedback * itemsPerPageFeedback
+);
+
+  const renderFeedbacks = () => (
+  <div className="space-y-6">
+    <h2 className="text-xl font-semibold">Quản lý Feedback</h2>
+
+    {feedbackStats && (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <p className="text-gray-500 text-sm mb-1">Tổng Feedback</p>
+          <p className="text-2xl font-bold">{feedbackStats.totalFeedbacks}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <p className="text-gray-500 text-sm mb-1">Điểm TB</p>
+          <p className="text-2xl font-bold">{feedbackStats.averageRating}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <p className="text-gray-500 text-sm mb-1">Phân bố điểm</p>
+          <p className="text-sm">
+            {Object.entries(feedbackStats.byRating).map(([rate, count]) => (
+              <span key={rate} className="inline-block mr-3">
+                <span className="font-semibold">{rate}⭐</span>: {count}
+              </span>
+            ))}
+          </p>
+        </div>
+      </div>
+    )}
+
+    <div className="bg-white rounded-xl shadow-sm border overflow-auto">
+  <table className="min-w-full divide-y divide-gray-200">
+    <thead className="bg-gray-50">
+      <tr>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+          Người dùng
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+          Bác sĩ
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+          Nội dung
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+          Điểm
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+          Ngày
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+          Trạng thái
+        </th>
+        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+          Hành động
+        </th>
+      </tr>
+    </thead>
+    <tbody className="bg-white divide-y divide-gray-100">
+      {loadingFeedback ? (
+        <tr>
+          <td colSpan={7} className="text-center py-6">Đang tải...</td>
+        </tr>
+      ) : feedbackList.length === 0 ? (
+        <tr>
+          <td colSpan={7} className="text-center py-6">Chưa có feedback</td>
+        </tr>
+      ) : (
+        displayedFeedbacks.map(item => (
+          <tr key={item.feedbackId} className="hover:bg-gray-50">
+            <td className="px-4 py-3 text-sm text-gray-700">{item.name}</td>
+            <td className="px-4 py-3 text-sm text-gray-700">{item.doctorId}</td>
+            <td className="px-4 py-3 text-sm text-gray-700">{item.content}</td>
+            <td className="px-4 py-3 text-sm font-medium text-yellow-600">{item.rating}⭐</td>
+            <td className="px-4 py-3 text-sm text-gray-500">{item.date}</td>
+            <td className="px-4 py-3">
+              <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                item.status === 'Active'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-200 text-gray-700'
+              }`}>
+                {item.status}
+              </span>
+            </td>
+            <td className="px-4 py-3 text-center">
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedFeedback(item);
+                    setShowFeedbackDetail(true);
+                  }}
+                  className="inline-flex items-center px-3 py-1 text-xs font-medium rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                >
+                  <Eye className="w-4 h-4 mr-1" />
+                  Xem
+                </button>
+                <button
+                  onClick={() => handleDeleteFeedback(item.feedbackId)}
+                  className="inline-flex items-center px-3 py-1 text-xs font-medium rounded bg-red-50 text-red-700 hover:bg-red-100 transition"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Xóa
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+  <div className="flex justify-end items-center space-x-2 px-4 py-4">
+  <button
+    disabled={currentPageFeedback === 1}
+    onClick={() => setCurrentPageFeedback(prev => Math.max(prev - 1, 1))}
+    className="px-3 py-1 border rounded disabled:opacity-50"
+  >
+    Trang trước
+  </button>
+  <span className="text-sm">
+    Trang {currentPageFeedback} / {totalPagesFeedback}
+  </span>
+  <button
+    disabled={currentPageFeedback === totalPagesFeedback || totalPagesFeedback === 0}
+    onClick={() => setCurrentPageFeedback(prev => Math.min(prev + 1, totalPagesFeedback))}
+    className="px-3 py-1 border rounded disabled:opacity-50"
+  >
+    Trang sau
+  </button>
+</div>
+</div>
+</div>
+);
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
@@ -1270,7 +1475,8 @@ const formatDate = (dateString: string) => {
           {activeTab === 'users' && renderUsers()}
           {activeTab === 'doctors' && renderDoctors()}
           {activeTab === 'revenue' && renderRevenue()}
-  {activeTab === 'vietqr' && renderVietQR()}
+          {activeTab === 'vietqr' && renderVietQR()}
+          {activeTab === 'feedback' && renderFeedbacks()}
         </main>
         {/* Modal hiển thị chi tiết người dùng */}
         {selectedUser && !showEditModal && (
@@ -1286,6 +1492,14 @@ const formatDate = (dateString: string) => {
             onUpdateSuccess={() => fetchAndUpdateUser(selectedUser.id)}
           />
         )}
+
+{showFeedbackDetail && selectedFeedback && (
+  <FeedbackDetailModal
+    feedback={selectedFeedback}
+    onClose={() => setShowFeedbackDetail(false)}
+    onToggleStatus={handleUpdateStatus}
+  />
+)}
 
 
 

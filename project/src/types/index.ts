@@ -123,3 +123,27 @@ export interface CreateFeedbackDTO {
   content: string;
   rating: number;
 }
+
+export interface FeedbackDTO {
+  feedbackId: number;
+  doctorId: number;
+  userId: string;
+  name: string;
+  initials: string;
+  content: string;
+  rating: number;
+  date: string;
+  status: string;
+  adminNotes?: string;
+}
+
+export interface FeedbackStatisticsDTO {
+  totalFeedbacks: number;
+  averageRating: number;
+  byRating: Record<number, number>;
+}
+
+export interface UpdateFeedbackStatusDTO {
+  status: string;
+  adminNotes?: string;
+}
