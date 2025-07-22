@@ -5,6 +5,7 @@ import {
   updateUserById,
   deleteUser
 } from '../apis/admin/userAdminApi';
+import { subDays, format } from 'date-fns';
 
 import {
   searchVietQRPaymentRequests,
@@ -72,6 +73,7 @@ const Admin: React.FC = () => {
 >('overview');
  const [searchTerm, setSearchTerm] = useState('');
  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+ const [chartData, setChartData] = useState<any[]>([]);
   const [chartFilter, setChartFilter] = useState<'year' | 'month' | 'week'>('month');
   const [sortBy, setSortBy] = useState<'revenue' | 'appointments'>('revenue');
   const [userList, setUserList] = useState<AdminUser[]>([]);
@@ -82,7 +84,7 @@ const Admin: React.FC = () => {
   const doctorList = userList.filter(user => user.roles.includes('Doctor'));
   const [currentPageUsers, setCurrentPageUsers] = useState(1);
   const [currentPageDoctors, setCurrentPageDoctors] = useState(1);
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
   const [vietQRRequests, setVietQRRequests] = useState<AdminPaymentRequest[]>([]);
   const [loadingVietQR, setLoadingVietQR] = useState(false);
   const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<AdminPaymentRequest | null>(null);
@@ -330,7 +332,14 @@ useEffect(() => {
   }
 }, [activeTab, chartFilter]);
 
+const [currentPageVietQR, setCurrentPageVietQR] = useState(1);
+const itemsPerPageVietQR = 10;
 
+const displayedVietQRRequests = vietQRRequests.slice(
+  (currentPageVietQR - 1) * itemsPerPageVietQR,
+  currentPageVietQR * itemsPerPageVietQR
+);
+const totalPagesVietQR = Math.ceil(vietQRRequests.length / itemsPerPageVietQR);
 
 
   const sidebarItems = [
@@ -342,16 +351,35 @@ useEffect(() => {
   { id: 'feedback', label: 'Feedback', icon: Star },
   ];
   
+  useEffect(() => {
+  if (!dashboardStats?.revenueData) return;
+
+  if (chartFilter === 'week') {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      const label = format(date, 'dd/MM');
+      const matched = dashboardStats.revenueData.find((d: any) => d.label === label);
+
+      return {
+        label,
+        revenue: matched?.revenue || 0,
+        percentage: matched?.percentage || 0,
+        appointments: matched?.appointments || 0,
+      };
+    });
+
+    setChartData(last7Days);
+  } else {
+    const sorted = [...dashboardStats.revenueData].sort((a, b) =>
+      sortBy === 'revenue' ? b.revenue - a.revenue : b.appointments - a.appointments
+    );
+    setChartData(sorted);
+  }
+}, [dashboardStats?.revenueData, chartFilter, sortBy]);
+
   const renderOverview = () => {
-  const sortedRevenueData = [...(dashboardStats?.revenueData || [])].sort((a, b) => {
-    if (sortBy === 'revenue') {
-      return b.revenue - a.revenue;
-    }
-    if (sortBy === 'appointments') {
-      return b.appointments - a.appointments;
-    }
-    return 0;
-  });
+  
+
 
   return (
     <div className="space-y-6">
@@ -395,69 +423,50 @@ useEffect(() => {
 
 
       {/* Sales Details Chart */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Sales Details</h3>
-          <div className="flex items-center space-x-4">
-            <select
-              value={chartFilter}
-              onChange={(e) => setChartFilter(e.target.value as 'year' | 'month' | 'week')}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="year">This Year</option>
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'revenue' | 'appointments')}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="revenue">Sort by Revenue</option>
-              <option value="appointments">Sort by Appointments</option>
-            </select>
-          </div>
-        </div>
+<div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+  <div className="flex items-center justify-between mb-6">
+    <h3 className="text-lg font-semibold text-gray-900">Sales Details</h3>
+    <div className="flex items-center space-x-4">
+      <select
+        value={chartFilter}
+        onChange={(e) => setChartFilter(e.target.value as 'year' | 'month' | 'week')}
+        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="week">This Week</option>
+        <option value="month">This Month</option>
+        <option value="year">This Year</option>
+      </select>
+      <select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value as 'revenue' | 'appointments')}
+        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="revenue">Sort by Revenue</option>
+        <option value="appointments">Sort by Appointments</option>
+      </select>
+    </div>
+  </div>
 
-        <div className="relative h-80">
-          <svg className="absolute inset-0 w-full h-full">
-            {/* ... Gradient definitions ... */}
-
-            {/* Main line */}
-            <polyline
-              points={sortedRevenueData.map((item, index) =>
-                `${(index * (100 / (sortedRevenueData.length - 1)))}%,${320 - (item.percentage * 3.2)}`
-              ).join(' ')}
-              fill="none"
-              stroke="#3B82F6"
-              strokeWidth="3"
-              className="drop-shadow-sm"
-            />
-
-            {/* Data points */}
-            {sortedRevenueData.map((item, index) => (
-              <g key={index}>
-                <circle
-                  cx={`${(index * (100 / (sortedRevenueData.length - 1)))}%`}
-                  cy={320 - (item.percentage * 3.2)}
-                  r="4"
-                  fill="#3B82F6"
-                  className="drop-shadow-sm"
-                />
-              </g>
-            ))}
-          </svg>
-
-          {/* X-axis labels */}
-          <div className="absolute bottom-0 w-full flex justify-between text-xs text-gray-500 pt-4">
-            {sortedRevenueData.map((item, index) => (
-              <span key={index} className="text-center">
-                {item.label}
-              </span>
-            ))}
-          </div>
-        </div>
+  {/* Bar Chart */}
+  <div className="h-80 flex items-end justify-between space-x-4 px-2">
+    {chartData.map((item, index) => (
+      <div key={index} className="flex flex-col items-center flex-1">
+        <div
+          className="w-6 bg-blue-500 rounded-t hover:bg-blue-600 transition-all"
+          style={{
+            height: `${item.percentage * 2.8}px`, // Chiều cao cột theo phần trăm
+          }}
+          title={`Revenue: ${item.revenue.toLocaleString()}₫\nAppointments: ${item.appointments}`}
+        />
+        <span className="mt-2 text-xs text-gray-600 whitespace-nowrap text-center">
+          {item.label}
+        </span>
       </div>
+    ))}
+  </div>
+</div>
+
+
 
       {/* Modal */}
       {showCreateModal && <CreateDoctorModal onClose={() => setShowCreateModal(false)} />}
@@ -917,126 +926,100 @@ useEffect(() => {
       </div>
 
       {/* Payment Requests Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+    <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khách hàng</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gói dịch vụ</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã chuyển khoản</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số tiền</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày tạo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {loadingVietQR ? (
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Khách hàng
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gói dịch vụ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mã chuyển khoản
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Số tiền
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ngày tạo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
+                <td colSpan={7} className="px-6 py-8 text-center">Đang tải...</td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loadingVietQR ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center">
-                    <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">Đang tải...</p>
+            ) : displayedVietQRRequests.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-8 text-center">Không có yêu cầu thanh toán nào</td>
+              </tr>
+            ) : (
+              displayedVietQRRequests.map((request) => (
+                <tr key={request.paymentRequestId} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-900">{request.userName}</div>
+                        <div className="text-sm text-gray-500">{request.userEmail}</div>
+                      </div>
+                    </div>
                   </td>
-                </tr>
-              ) : vietQRRequests.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center">
-                    <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">Không có yêu cầu thanh toán nào</p>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{request.planName}</div>
+                    <div className="text-sm text-gray-500">{request.billingCycle}</div>
                   </td>
-                </tr>
-              ) : (
-                vietQRRequests.map((request) => (
-                  <tr key={request.paymentRequestId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="w-4 h-4 text-blue-600" />
-                          </div>
-                        </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {request.userName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {request.userEmail}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{request.planName}</div>
-                      <div className="text-sm text-gray-500">{request.billingCycle}</div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono text-gray-900">
-                        {request.transferCode}
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatAmount(request.amount)}
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(request.status, request.isExpired)}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(request.createdAt)}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex gap-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{request.transferCode}</td>
+                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{formatAmount(request.amount)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(request.status, request.isExpired)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(request.createdAt)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedPaymentRequest(request)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                      >
+                        <Eye className="w-4 h-4" /> Xem
+                      </button>
+                      {request.status === 'Pending' && !request.isExpired && (
                         <button
-                          onClick={() => setSelectedPaymentRequest(request)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                          onClick={() => {
+                            setSelectedPaymentRequest(request);
+                            setShowConfirmModal(true);
+                          }}
+                          className="text-green-600 hover:text-green-900 flex items-center gap-1"
                         >
-                          <Eye className="w-4 h-4" />
-                          Xem
+                          <CheckCircleIcon className="w-4 h-4" /> Xác nhận
                         </button>
-                        
-                        {request.status === 'Pending' && !request.isExpired && (
-                          <button
-                            onClick={() => {
-                              setSelectedPaymentRequest(request);
-                              setShowConfirmModal(true);
-                            }}
-                            className="text-green-600 hover:text-green-900 flex items-center gap-1"
-                          >
-                            <CheckCircleIcon className="w-4 h-4" />
-                            Xác nhận
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* ✅ Pagination control */}
+      <div className="flex justify-end items-center space-x-2 px-6 py-4">
+        <button
+          disabled={currentPageVietQR === 1}
+          onClick={() => setCurrentPageVietQR((prev) => Math.max(prev - 1, 1))}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Trang trước
+        </button>
+        <span className="text-sm">Trang {currentPageVietQR} / {totalPagesVietQR}</span>
+        <button
+          disabled={currentPageVietQR === totalPagesVietQR || totalPagesVietQR === 0}
+          onClick={() => setCurrentPageVietQR((prev) => Math.min(prev + 1, totalPagesVietQR))}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Trang sau
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
       {/* Payment Request Detail Modal */}
       {selectedPaymentRequest && !showConfirmModal && (
@@ -1257,8 +1240,6 @@ useEffect(() => {
           </div>
         </div>
       )}
-  </div> 
-  );
 
 const totalPagesFeedback = Math.ceil(feedbackList.length / itemsPerPageFeedback);
 const displayedFeedbacks = feedbackList.slice(
